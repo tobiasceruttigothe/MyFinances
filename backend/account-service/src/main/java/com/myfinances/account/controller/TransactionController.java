@@ -7,6 +7,7 @@ import com.myfinances.account.model.TransactionType;
 import com.myfinances.account.service.TransactionService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -134,4 +135,15 @@ public class TransactionController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate) {
         return ResponseEntity.ok(service.calculateBalanceByDateRange(startDate, endDate));
     }
+
+
+    // Inyectamos el valor desde GitHub
+    @Value("${myfinances.message:Error al cargar}")
+    private String message;
+
+    @GetMapping("/test-config")
+    public ResponseEntity<String> testConfig() {
+        return ResponseEntity.ok("Mensaje del Config Server: " + message);
+    }
+
 }
