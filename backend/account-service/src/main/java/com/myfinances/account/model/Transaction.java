@@ -21,7 +21,7 @@ public class Transaction {
     @Column(nullable = false, length = 100)
     private String description; // Ej: "Pago de Luz"
 
-    @Column(nullable = false, precision = 2, scale = 2)
+    @Column(nullable = false, precision = 15, scale = 2)
     private BigDecimal amount;  // Ej: 5000.00
 
     @Column(nullable = false)
