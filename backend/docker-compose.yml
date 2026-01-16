@@ -1,5 +1,4 @@
 services:
-  # --- 1. Eureka Server (El Directorio) ---
   discovery-server:
     image: discovery-server:latest
     container_name: discovery-server
@@ -8,11 +7,9 @@ services:
     networks:
       - myfinances-net
     environment:
-      # Forzamos a Eureka a no registrarse a sí mismo
-      EUREKA_CLIENT_REGISTER_WITH_EUREKA: "false"
-      EUREKA_CLIENT_FETCH_REGISTRY: "false"
+      - EUREKA_CLIENT_REGISTER_WITH_EUREKA=false
+      - EUREKA_CLIENT_FETCH_REGISTRY=false
 
-  # --- 2. Config Server (El Mayordomo) ---
   config-server:
     image: config-server:latest
     container_name: config-server
@@ -23,47 +20,40 @@ services:
     networks:
       - myfinances-net
     environment:
-      # Le decimos explícitamente dónde está Eureka
-      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka/
+      # Aquí llenamos la variable que pusimos en el properties del Config Server
+      - EUREKA_URI=http://discovery-server:8761/eureka/
 
-  # --- 3. Account Service (Core) ---
   account-service:
     image: account-service:latest
     container_name: account-service
     ports:
       - "8081:8081"
-    restart: on-failure:5  # Si falla, reintenta 5 veces
+    restart: on-failure
     depends_on:
       - config-server
       - discovery-server
     networks:
       - myfinances-net
     environment:
-      # Conexión al Config Server
-      SPRING_CONFIG_IMPORT: "optional:configserver:http://config-server:8888"
-      # SOBRESCRITURA TOTAL de Eureka (Adiós localhost)
-      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka/
-      # Ajuste para que se registre con su nombre de contenedor, no IP
-      EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+      # Aquí llenamos la variable que pusimos en el properties del Account Service
+      - CONFIG_SERVER_URL=http://config-server:8888
+      - EUREKA_URI=http://discovery-server:8761/eureka/
 
-  # --- 4. Gateway Service (La Puerta) ---
   gateway-service:
     image: gateway-service:latest
     container_name: gateway-service
     ports:
       - "8080:8080"
-    restart: on-failure:5
+    restart: on-failure
     depends_on:
       - config-server
       - discovery-server
     networks:
       - myfinances-net
     environment:
-      SPRING_CONFIG_IMPORT: "optional:configserver:http://config-server:8888"
-      # SOBRESCRITURA TOTAL de Eureka
-      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka/
-      # Logs detallados para ver la victoria
-      LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_CLOUD_GATEWAY: DEBUG
+      # Aquí llenamos la variable que pusimos en el yml del Gateway
+      - CONFIG_SERVER_URL=http://config-server:8888
+      - EUREKA_URI=http://discovery-server:8761/eureka/
 
 networks:
   myfinances-net:
