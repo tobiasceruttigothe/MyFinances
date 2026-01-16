@@ -20,8 +20,9 @@ services:
     networks:
       - myfinances-net
     environment:
+      - EUREKA_URL=http://discovery-server:8761/eureka/
       # Aquí llenamos la variable que pusimos en el properties del Config Server
-      - EUREKA_URI=http://discovery-server:8761/eureka/
+      # - EUREKA_URI=http://discovery-server:8761/eureka/
 
   account-service:
     image: account-service:latest
@@ -36,8 +37,10 @@ services:
       - myfinances-net
     environment:
       # Aquí llenamos la variable que pusimos en el properties del Account Service
+      #- CONFIG_SERVER_URL=http://config-server:8888
+        #- EUREKA_URI=http://discovery-server:8761/eureka/
       - CONFIG_SERVER_URL=http://config-server:8888
-      - EUREKA_URI=http://discovery-server:8761/eureka/
+      - EUREKA_URL=http://discovery-server:8761/eureka/
 
   gateway-service:
     image: gateway-service:latest
@@ -52,8 +55,10 @@ services:
       - myfinances-net
     environment:
       # Aquí llenamos la variable que pusimos en el yml del Gateway
+      #- CONFIG_SERVER_URL=http://config-server:8888
+        #- EUREKA_URI=http://discovery-server:8761/eureka/
       - CONFIG_SERVER_URL=http://config-server:8888
-      - EUREKA_URI=http://discovery-server:8761/eureka/
+      - EUREKA_URL=http://discovery-server:8761/eureka/
 
 networks:
   myfinances-net:
