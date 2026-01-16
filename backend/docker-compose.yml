@@ -21,8 +21,6 @@ services:
       - myfinances-net
     environment:
       - EUREKA_URL=http://discovery-server:8761/eureka/
-      # Aquí llenamos la variable que pusimos en el properties del Config Server
-      # - EUREKA_URI=http://discovery-server:8761/eureka/
 
   account-service:
     image: account-service:latest
@@ -33,12 +31,10 @@ services:
     depends_on:
       - config-server
       - discovery-server
+      - postgres-db
     networks:
       - myfinances-net
     environment:
-      # Aquí llenamos la variable que pusimos en el properties del Account Service
-      #- CONFIG_SERVER_URL=http://config-server:8888
-        #- EUREKA_URI=http://discovery-server:8761/eureka/
       - CONFIG_SERVER_URL=http://config-server:8888
       - EUREKA_URL=http://discovery-server:8761/eureka/
 
@@ -54,12 +50,45 @@ services:
     networks:
       - myfinances-net
     environment:
-      # Aquí llenamos la variable que pusimos en el yml del Gateway
-      #- CONFIG_SERVER_URL=http://config-server:8888
-        #- EUREKA_URI=http://discovery-server:8761/eureka/
       - CONFIG_SERVER_URL=http://config-server:8888
       - EUREKA_URL=http://discovery-server:8761/eureka/
+
+  postgres-db:
+    image: postgres:15-alpine
+    container_name: postgres-db
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=myfinances_user
+      - POSTGRES_PASSWORD=myfinances_pass
+      - POSTGRES_DB=account_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - myfinances-net
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:23.0.0
+    container_name: keycloak
+    command: start-dev
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres-db:5432/keycloak
+      KC_DB_USERNAME: myfinances_user
+      KC_DB_PASSWORD: myfinances_pass
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+    ports:
+      - "8082:8080"
+    depends_on:
+      - postgres-db
+    networks:
+      - myfinances-net
 
 networks:
   myfinances-net:
     driver: bridge
+
+volumes:
+  postgres_data:
+
