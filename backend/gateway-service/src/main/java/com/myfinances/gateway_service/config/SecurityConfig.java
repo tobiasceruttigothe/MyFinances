@@ -16,8 +16,6 @@ public class SecurityConfig {
         serverHttpSecurity
                 .csrf(ServerHttpSecurity.CsrfSpec::disable) // Deshabilitamos CSRF para APIs REST
                 .authorizeExchange(exchange -> exchange
-                        // Permitir acceso libre a Eureka y Actuator (para monitoreo)
-                        .pathMatchers("/eureka/**").permitAll()
                         .pathMatchers("/actuator/**").permitAll()
                         // Permitir login (si tuviéramos endpoint de login propio, aquí no aplica tanto)
                         // PROTEGER todo lo que sea API de negocio
