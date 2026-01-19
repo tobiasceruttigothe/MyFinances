@@ -5,8 +5,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import java.math.BigDecimal;
 
-// "name" debe coincidir con el nombre en Eureka del otro servicio (INVESTMENT-SERVICE)
-@FeignClient(name = "investment-service")
+
+@FeignClient(name = "investment-service", url = "http://investment-service:8083")
 public interface InvestmentClient {
 
     @GetMapping("/api/v1/investments/user/{userId}")

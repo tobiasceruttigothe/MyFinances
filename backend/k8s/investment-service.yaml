@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: investment-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: investment-service
+  template:
+    metadata:
+      labels:
+        app: investment-service
+    spec:
+      containers:
+        - name: investment-service
+          image: investment-service:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8083
+          env:
+            - name: CONFIG_SERVER_URL
+              value: "http://config-server:8888"
+            
+            # --- CAMBIO 1: Desactivar Eureka ---
+            # Ya no queremos que se registre, usaremos DNS de K8s
+            - name: EUREKA_CLIENT_ENABLED
+              value: "false"
+            
+            # --- CAMBIO 2: Conectar Observabilidad ---
+            # Apuntamos al servicio 'zipkin' dentro del cluster
+            - name: MANAGEMENT_ZIPKIN_TRACING_ENDPOINT
+              value: "http://zipkin:9411/api/v2/spans"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: investment-service
+spec:
+  selector:
+    app: investment-service
+  ports:
+    - protocol: TCP
+      port: 8083
+      targetPort: 8083
