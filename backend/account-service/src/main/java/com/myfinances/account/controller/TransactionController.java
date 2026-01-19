@@ -1,5 +1,6 @@
 package com.myfinances.account.controller;
 
+
 import com.myfinances.account.dto.BalanceDTO;
 import com.myfinances.account.dto.TransactionDTO;
 import com.myfinances.account.model.Transaction;
@@ -22,7 +23,6 @@ import java.util.List;
 public class TransactionController {
 
     private final TransactionService service;
-
     /**
      * Crear una nueva transacción
      */

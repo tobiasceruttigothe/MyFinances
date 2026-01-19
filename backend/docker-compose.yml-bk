@@ -1,10 +1,6 @@
 services:
-  # --- 1. Discovery Server ---
   discovery-server:
     image: discovery-server:latest
-    build:
-      context: ./discovery-server
-      dockerfile: Dockerfile
     container_name: discovery-server
     ports:
       - "8761:8761"
@@ -14,12 +10,8 @@ services:
       - EUREKA_CLIENT_REGISTER_WITH_EUREKA=false
       - EUREKA_CLIENT_FETCH_REGISTRY=false
 
-  # --- 2. Config Server ---
   config-server:
     image: config-server:latest
-    build:
-      context: ./config-server
-      dockerfile: Dockerfile  
     container_name: config-server
     ports:
       - "8888:8888"
@@ -32,9 +24,6 @@ services:
 
   account-service:
     image: account-service:latest
-    build:
-      context: ./account-service
-      dockerfile: Dockerfile
     container_name: account-service
     ports:
       - "8081:8081"
@@ -51,9 +40,6 @@ services:
 
   gateway-service:
     image: gateway-service:latest
-    build:
-      context: ./gateway-service
-      dockerfile: Dockerfile
     container_name: gateway-service
     ports:
       - "8080:8080"
@@ -81,70 +67,23 @@ services:
     networks:
       - myfinances-net
 
-  # --- 4. Base de Datos de Identidad (Keycloak) ---
-  keycloak-db:
-    image: postgres:15-alpine
-    container_name: keycloak-db
-    environment:
-      - POSTGRES_DB=keycloak
-      - POSTGRES_USER=keycloak
-      - POSTGRES_PASSWORD=password
-    volumes:
-      - keycloak_data:/var/lib/postgresql/data
-    networks:
-      - myfinances-net
-
-  # --- 5. Keycloak (Identity Provider) ---
   keycloak:
     image: quay.io/keycloak/keycloak:23.0.0
     container_name: keycloak
-    command: start-dev --import-realm # <--- MAGIA: Importar al iniciar
+    command: start-dev
     environment:
       KC_DB: postgres
-      KC_DB_URL: jdbc:postgresql://keycloak-db:5432/keycloak
-      KC_DB_USERNAME: keycloak
-      KC_DB_PASSWORD: password
+      KC_DB_URL: jdbc:postgresql://postgres-db:5432/keycloak
+      KC_DB_USERNAME: myfinances_user
+      KC_DB_PASSWORD: myfinances_pass
       KEYCLOAK_ADMIN: admin
       KEYCLOAK_ADMIN_PASSWORD: admin
     ports:
       - "8082:8080"
-    volumes:
-      # Montamos el archivo JSON dentro del contenedor para que lo lea
-      - ./keycloak-config/realm-export.json:/opt/keycloak/data/import/realm-export.json
     depends_on:
-      - keycloak-db
+      - postgres-db
     networks:
       - myfinances-net
-
-
-  investment-service:
-    image: investment-service:latest
-    build:
-      context: ./investment-service
-      dockerfile: Dockerfile
-    container_name: investment-service
-    ports:
-      - "8083:8083"
-    restart: on-failure
-    depends_on:
-      - config-server
-      - discovery-server
-    networks:
-      - myfinances-net
-    environment:
-      - CONFIG_SERVER_URL=http://config-server:8888
-      - EUREKA_URL=http://discovery-server:8761/eureka/
-  
-   # --- 8. Distributed Tracing (Zipkin) ---
-  zipkin:
-    image: openzipkin/zipkin
-    container_name: zipkin
-    ports:
-      - "9411:9411"
-    networks:
-      - myfinances-net
-
-
 
 networks:
   myfinances-net:
@@ -152,4 +91,4 @@ networks:
 
 volumes:
   postgres_data:
-  keycloak_data: # Volumen nuevo para persistencia de KC
+

@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres-db
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres-db
+  template:
+    metadata:
+      labels:
+        app: postgres-db
+    spec:
+      containers:
+        - name: postgres-db
+          image: postgres:15-alpine
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              value: "myfinances_user"
+            - name: POSTGRES_PASSWORD
+              value: "myfinances_pass"
+            - name: POSTGRES_DB
+              value: "account_db"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-db # Este nombre es vital, será el DNS interno
+spec:
+  selector:
+    app: postgres-db
+  ports:
+    - protocol: TCP
+      port: 5432
+      targetPort: 5432
