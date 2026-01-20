@@ -9,6 +9,7 @@
   "duplicateEmailsAllowed": false,
   "resetPasswordAllowed": true,
   "editUsernameAllowed": true,
+  
   "roles": {
     "realm": [
       {
@@ -21,6 +22,7 @@
       }
     ]
   },
+  
   "clients": [
     {
       "clientId": "myfinances-app",
@@ -30,12 +32,8 @@
       "enabled": true,
       "alwaysDisplayInConsole": false,
       "clientAuthenticatorType": "client-secret",
-      "redirectUris": [
-        "*"
-      ],
-      "webOrigins": [
-        "*"
-      ],
+      "redirectUris": ["*"],
+      "webOrigins": ["*"],
       "notBefore": 0,
       "bearerOnly": false,
       "consentRequired": false,
@@ -46,7 +44,9 @@
       "publicClient": true,
       "frontchannelLogout": false,
       "protocol": "openid-connect",
-      "attributes": {},
+      "attributes": {
+        "access.token.lifespan": "300"
+      },
       "fullScopeAllowed": true,
       "nodeReRegistrationTimeout": -1,
       "defaultClientScopes": [
@@ -64,11 +64,13 @@
       ]
     }
   ],
+  
   "users": [
     {
       "username": "usuario_prueba",
       "enabled": true,
       "email": "usuario@test.com",
+      "emailVerified": true,
       "firstName": "Usuario",
       "lastName": "Prueba",
       "credentials": [
@@ -78,10 +80,44 @@
           "temporary": false
         }
       ],
-      "realmRoles": [
-        "USER"
-      ],
+      "realmRoles": ["USER"],
       "clientRoles": {}
+    }
+  ],
+  
+  "defaultDefaultClientScopes": [
+    "role_list",
+    "profile",
+    "email",
+    "roles",
+    "web-origins"
+  ],
+  
+  "clientScopes": [
+    {
+      "name": "roles",
+      "description": "OpenID Connect scope for add user roles to the access token",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "false",
+        "display.on.consent.screen": "true",
+        "consent.screen.text": "${rolesScopeConsentText}"
+      },
+      "protocolMappers": [
+        {
+          "name": "realm roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "foo",
+            "access.token.claim": "true",
+            "claim.name": "realm_access.roles",
+            "jsonType.label": "String",
+            "multivalued": "true"
+          }
+        }
+      ]
     }
   ]
 }

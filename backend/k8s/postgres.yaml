@@ -1,3 +1,4 @@
+# k8s/postgres.yaml - ACTUALIZADO
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -22,13 +23,22 @@ spec:
               value: "myfinances_user"
             - name: POSTGRES_PASSWORD
               value: "myfinances_pass"
+            # ⭐ TRUCO: Solo podemos crear 1 BD con variable de entorno
+            # Las otras las creamos con un initdb script
             - name: POSTGRES_DB
               value: "account_db"
+          volumeMounts:
+            - name: init-scripts
+              mountPath: /docker-entrypoint-initdb.d
+      volumes:
+        - name: init-scripts
+          configMap:
+            name: postgres-init-scripts
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: postgres-db # Este nombre es vital, será el DNS interno
+  name: postgres-db
 spec:
   selector:
     app: postgres-db
@@ -36,3 +46,20 @@ spec:
     - protocol: TCP
       port: 5432
       targetPort: 5432
+---
+# ⭐ ConfigMap con script de inicialización
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-init-scripts
+data:
+  init.sql: |
+    -- Crear las bases de datos adicionales si no existen
+    SELECT 'CREATE DATABASE user_db'
+    WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'user_db')\gexec
+    
+    SELECT 'CREATE DATABASE investment_db'
+    WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'investment_db')\gexec
+    
+    SELECT 'CREATE DATABASE goals_db'
+    WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'goals_db')\gexec

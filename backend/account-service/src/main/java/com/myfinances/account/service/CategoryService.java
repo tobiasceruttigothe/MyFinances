@@ -4,6 +4,7 @@ import com.myfinances.account.dto.CategoryDTO;
 import com.myfinances.account.exception.BadRequestException;
 import com.myfinances.account.exception.ResourceNotFoundException;
 import com.myfinances.account.model.CategoryType;
+import com.myfinances.account.model.Transaction;
 import com.myfinances.account.repository.CategoryRepository;
 import com.myfinances.account.repository.TransactionRepository;
 import lombok.RequiredArgsConstructor;
@@ -12,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -22,70 +24,151 @@ public class CategoryService {
     private final TransactionRepository transactionRepository;
 
     /**
-     * Crea una nueva categoría
+     * ⭐ Crea una nueva categoría para un usuario
      */
-    public CategoryType create(CategoryDTO dto) {
-        if (categoryRepository.existsByNameIgnoreCase(dto.getName())) {
-            throw new BadRequestException("Ya existe una categoría con el nombre: " + dto.getName());
+    public CategoryType create(UUID userId, CategoryDTO dto) {
+        // Validar que no exista una categoría con ese nombre para el usuario
+        if (categoryRepository.existsByUserIdAndNameIgnoreCase(userId, dto.getName())) {
+            throw new BadRequestException("Ya tienes una categoría con el nombre: " + dto.getName());
         }
 
-        CategoryType category = new CategoryType();
-        category.setName(dto.getName().toUpperCase());
+        // Si tiene parentId, validar que exista y pertenezca al usuario
+        if (dto.getParentId() != null) {
+            CategoryType parent = categoryRepository.findById(dto.getParentId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Categoría padre no encontrada"));
+
+            if (!parent.getUserId().equals(userId)) {
+                throw new BadRequestException("La categoría padre no te pertenece");
+            }
+
+            // Validar que la categoría padre sea del mismo tipo
+            if (parent.getType() != dto.getType()) {
+                throw new BadRequestException("La categoría padre debe ser del mismo tipo (INCOME/EXPENSE)");
+            }
+        }
+
+        CategoryType category = CategoryType.builder()
+                .userId(userId)
+                .name(dto.getName().toUpperCase())
+                .type(dto.getType())
+                .parentId(dto.getParentId())
+                .isSystem(false)
+                .description(dto.getDescription())
+                .build();
 
         return categoryRepository.save(category);
     }
 
     /**
-     * Obtiene todas las categorías
+     * Obtiene todas las categorías de un usuario
      */
     @Transactional(readOnly = true)
-    public List<CategoryType> findAll() {
-        return categoryRepository.findAll();
+    public List<CategoryType> findAllByUser(UUID userId) {
+        return categoryRepository.findByUserId(userId);
     }
 
     /**
-     * Busca una categoría por ID
+     * Obtiene categorías raíz (sin padre) de un usuario
      */
     @Transactional(readOnly = true)
-    public CategoryType findById(Long id) {
-        return categoryRepository.findById(id)
+    public List<CategoryType> findRootCategories(UUID userId) {
+        return categoryRepository.findByUserIdAndParentIdIsNull(userId);
+    }
+
+    /**
+     * Obtiene subcategorías de una categoría padre
+     */
+    @Transactional(readOnly = true)
+    public List<CategoryType> findSubcategories(UUID userId, Long parentId) {
+        return categoryRepository.findByUserIdAndParentId(userId, parentId);
+    }
+
+    /**
+     * Busca una categoría por ID y valida que pertenezca al usuario
+     */
+    @Transactional(readOnly = true)
+    public CategoryType findById(UUID userId, Long id) {
+        CategoryType category = categoryRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Categoría no encontrada con ID: " + id));
+
+        // ⭐ Validar que la categoría pertenezca al usuario (o sea del sistema)
+        if (category.getUserId() != null && !category.getUserId().equals(userId)) {
+            throw new BadRequestException("Esta categoría no te pertenece");
+        }
+
+        return category;
     }
 
     /**
-     * Busca una categoría por nombre
+     * Busca una categoría por nombre de un usuario
      */
     @Transactional(readOnly = true)
-    public CategoryType findByName(String name) {
-        return categoryRepository.findByNameIgnoreCase(name)
+    public CategoryType findByName(UUID userId, String name) {
+        return categoryRepository.findByUserIdAndNameIgnoreCase(userId, name)
                 .orElseThrow(() -> new ResourceNotFoundException("Categoría no encontrada con nombre: " + name));
     }
 
     /**
      * Actualiza una categoría
      */
-    public CategoryType update(Long id, CategoryDTO dto) {
-        CategoryType category = findById(id);
+    public CategoryType update(UUID userId, Long id, CategoryDTO dto) {
+        CategoryType category = findById(userId, id);
 
+        // ⭐ No permitir modificar categorías del sistema
+        if (category.getUserId() == null) {
+            throw new BadRequestException("No puedes modificar categorías del sistema");
+        }
+
+        // Validar cambio de nombre
         if (!category.getName().equalsIgnoreCase(dto.getName()) &&
-                categoryRepository.existsByNameIgnoreCase(dto.getName())) {
-            throw new BadRequestException("Ya existe una categoría con el nombre: " + dto.getName());
+                categoryRepository.existsByUserIdAndNameIgnoreCase(userId, dto.getName())) {
+            throw new BadRequestException("Ya tienes una categoría con el nombre: " + dto.getName());
+        }
+
+        // Validar cambio de padre
+        if (dto.getParentId() != null && !dto.getParentId().equals(category.getParentId())) {
+            // No permitir crear ciclos (categoría padre = categoría hija)
+            if (dto.getParentId().equals(id)) {
+                throw new BadRequestException("Una categoría no puede ser padre de sí misma");
+            }
+
+            CategoryType newParent = findById(userId, dto.getParentId());
+
+            if (newParent.getType() != category.getType()) {
+                throw new BadRequestException("La categoría padre debe ser del mismo tipo");
+            }
         }
 
         category.setName(dto.getName().toUpperCase());
+        category.setDescription(dto.getDescription());
+        category.setParentId(dto.getParentId());
+
         return categoryRepository.save(category);
     }
 
     /**
      * Elimina una categoría
      */
-    public void delete(Long id) {
-        CategoryType category = findById(id);
+    public void delete(UUID userId, Long id) {
+        CategoryType category = findById(userId, id);
 
-        List<?> transactions = transactionRepository.findByCategoryId(id);
+        // ⭐ No permitir eliminar categorías del sistema
+        if (category.getUserId() == null) {
+            throw new BadRequestException("No puedes eliminar categorías del sistema");
+        }
+
+        // Verificar que no tenga transacciones asociadas
+        List<Transaction> transactions = transactionRepository.findByUserIdAndCategoryId(userId, id);
         if (!transactions.isEmpty()) {
-            throw new BadRequestException("No se puede eliminar la categoría porque tiene " +
+            throw new BadRequestException("No puedes eliminar la categoría porque tiene " +
                     transactions.size() + " transacciones asociadas");
+        }
+
+        // Verificar que no tenga subcategorías
+        List<CategoryType> subcategories = categoryRepository.findByUserIdAndParentId(userId, id);
+        if (!subcategories.isEmpty()) {
+            throw new BadRequestException("No puedes eliminar la categoría porque tiene " +
+                    subcategories.size() + " subcategorías");
         }
 
         categoryRepository.delete(category);
@@ -95,20 +178,25 @@ public class CategoryService {
      * Obtiene el total gastado/ingresado por categoría
      */
     @Transactional(readOnly = true)
-    public BigDecimal getTotalByCategory(Long categoryId) {
-        return transactionRepository.sumByCategoryId(categoryId);
+    public BigDecimal getTotalByCategory(UUID userId, Long categoryId) {
+        // Validar que la categoría pertenezca al usuario
+        findById(userId, categoryId);
+        return transactionRepository.sumByUserIdAndCategoryId(userId, categoryId);
     }
 
     /**
      * Convierte una entidad CategoryType a DTO con datos enriquecidos
      */
-    public CategoryDTO toDTO(CategoryType category) {
-        Long transactionCount = (long) transactionRepository.findByCategoryId(category.getId()).size();
-        BigDecimal totalAmount = transactionRepository.sumByCategoryId(category.getId());
+    public CategoryDTO toDTO(UUID userId, CategoryType category) {
+        Long transactionCount = (long) transactionRepository.findByUserIdAndCategoryId(userId, category.getId()).size();
+        BigDecimal totalAmount = transactionRepository.sumByUserIdAndCategoryId(userId, category.getId());
 
         return CategoryDTO.builder()
                 .id(category.getId())
                 .name(category.getName())
+                .type(category.getType())
+                .parentId(category.getParentId())
+                .description(category.getDescription())
                 .transactionCount(transactionCount)
                 .totalAmount(totalAmount)
                 .build();
@@ -117,28 +205,9 @@ public class CategoryService {
     /**
      * Convierte una lista de categorías a DTOs
      */
-    public List<CategoryDTO> toDTOList(List<CategoryType> categories) {
+    public List<CategoryDTO> toDTOList(UUID userId, List<CategoryType> categories) {
         return categories.stream()
-                .map(this::toDTO)
+                .map(cat -> toDTO(userId, cat))
                 .toList();
-    }
-
-    /**
-     * Inicializa categorías por defecto si no existen
-     */
-    public void initializeDefaultCategories() {
-        String[] defaultCategories = {
-                "HOGAR", "COMIDA", "TRANSPORTE", "SALUD", "ENTRETENIMIENTO",
-                "EDUCACION", "ROPA", "SERVICIOS", "AHORRO", "SALARIO",
-                "FREELANCE", "INVERSIONES", "OTROS"
-        };
-
-        for (String categoryName : defaultCategories) {
-            if (!categoryRepository.existsByNameIgnoreCase(categoryName)) {
-                CategoryType category = new CategoryType();
-                category.setName(categoryName);
-                categoryRepository.save(category);
-            }
-        }
     }
 }

@@ -19,6 +19,7 @@ import java.time.format.TextStyle;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -31,8 +32,8 @@ public class ReportService {
     /**
      * Genera un resumen mensual completo
      */
-    public MonthlySummaryDTO getMonthlySummary(int year, int month) {
-        List<Transaction> transactions = transactionRepository.findByYearAndMonth(year, month);
+    public MonthlySummaryDTO getMonthlySummary(UUID userId, int year, int month) {
+        List<Transaction> transactions = transactionRepository.findByUserIdAndYearAndMonth(userId, year, month);
 
         BigDecimal totalIncome = BigDecimal.ZERO;
         BigDecimal totalExpense = BigDecimal.ZERO;
@@ -68,8 +69,8 @@ public class ReportService {
                 .savingsRate(savingsRate)
                 .incomeTransactionCount(incomeCount)
                 .expenseTransactionCount(expenseCount)
-                .expensesByCategory(getExpensesByCategory(year, month))
-                .incomesByCategory(getIncomesByCategory(year, month))
+                .expensesByCategory(getExpensesByCategory(userId, year, month))
+                .incomesByCategory(getIncomesByCategory(userId, year, month))
                 .calculatedAt(LocalDateTime.now())
                 .build();
     }
@@ -77,20 +78,20 @@ public class ReportService {
     /**
      * Obtiene gastos agrupados por categoría para un mes
      */
-    public List<CategorySummaryDTO> getExpensesByCategory(int year, int month) {
-        return getSummaryByTypeAndMonth(TransactionType.EXPENSE, year, month);
+    public List<CategorySummaryDTO> getExpensesByCategory(UUID userId, int year, int month) {
+        return getSummaryByTypeAndMonth(userId, TransactionType.EXPENSE, year, month);
     }
 
     /**
      * Obtiene ingresos agrupados por categoría para un mes
      */
-    public List<CategorySummaryDTO> getIncomesByCategory(int year, int month) {
-        return getSummaryByTypeAndMonth(TransactionType.INCOME, year, month);
+    public List<CategorySummaryDTO> getIncomesByCategory(UUID userId, int year, int month) {
+        return getSummaryByTypeAndMonth(userId, TransactionType.INCOME, year, month);
     }
 
-    private List<CategorySummaryDTO> getSummaryByTypeAndMonth(TransactionType type, int year, int month) {
-        List<Transaction> transactions = transactionRepository.findByYearAndMonth(year, month);
-        List<CategoryType> categories = categoryRepository.findAll();
+    private List<CategorySummaryDTO> getSummaryByTypeAndMonth(UUID userId, TransactionType type, int year, int month) {
+        List<Transaction> transactions = transactionRepository.findByUserIdAndYearAndMonth(userId, year, month);
+        List<CategoryType> categories = categoryRepository.findByUserId(userId);
 
         BigDecimal grandTotal = transactions.stream()
                 .filter(t -> t.getType() == type)
@@ -133,20 +134,20 @@ public class ReportService {
     /**
      * Obtiene el resumen de gastos por categoría (todo el tiempo)
      */
-    public CategorySummaryDTO.CategorySummaryResponse getAllExpensesByCategory() {
-        return getSummaryByType(TransactionType.EXPENSE);
+    public CategorySummaryDTO.CategorySummaryResponse getAllExpensesByCategory(UUID userId) {
+        return getSummaryByType(userId, TransactionType.EXPENSE);
     }
 
     /**
      * Obtiene el resumen de ingresos por categoría (todo el tiempo)
      */
-    public CategorySummaryDTO.CategorySummaryResponse getAllIncomesByCategory() {
-        return getSummaryByType(TransactionType.INCOME);
+    public CategorySummaryDTO.CategorySummaryResponse getAllIncomesByCategory(UUID userId) {
+        return getSummaryByType(userId, TransactionType.INCOME);
     }
 
-    private CategorySummaryDTO.CategorySummaryResponse getSummaryByType(TransactionType type) {
-        List<Transaction> transactions = transactionRepository.findByType(type);
-        List<CategoryType> categories = categoryRepository.findAll();
+    private CategorySummaryDTO.CategorySummaryResponse getSummaryByType(UUID userId, TransactionType type) {
+        List<Transaction> transactions = transactionRepository.findByUserIdAndType(userId, type);
+        List<CategoryType> categories = categoryRepository.findByUserId(userId);
 
         BigDecimal grandTotal = transactions.stream()
                 .map(Transaction::getAmount)
@@ -192,13 +193,13 @@ public class ReportService {
     /**
      * Obtiene comparativa de los últimos N meses
      */
-    public List<MonthlySummaryDTO> getMonthlyComparison(int months) {
+    public List<MonthlySummaryDTO> getMonthlyComparison(UUID userId, int months) {
         List<MonthlySummaryDTO> comparison = new ArrayList<>();
         LocalDateTime now = LocalDateTime.now();
 
         for (int i = 0; i < months; i++) {
             LocalDateTime date = now.minusMonths(i);
-            comparison.add(getMonthlySummary(date.getYear(), date.getMonthValue()));
+            comparison.add(getMonthlySummary(userId, date.getYear(), date.getMonthValue()));
         }
 
         return comparison;

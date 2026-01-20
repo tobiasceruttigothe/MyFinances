@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -25,48 +26,70 @@ public class TransactionService {
     private final CategoryRepository categoryRepository;
 
     /**
-     * Guarda una nueva transacción
+     * ⭐ Guarda una nueva transacción
      */
-    public Transaction save(TransactionDTO dto) {
+    public Transaction save(UUID userId, TransactionDTO dto) {
         CategoryType category = categoryRepository.findById(dto.getCategoryId())
                 .orElseThrow(() -> new ResourceNotFoundException("Categoría no encontrada con ID: " + dto.getCategoryId()));
 
-        Transaction transaction = new Transaction();
-        transaction.setDescription(dto.getDescription());
-        transaction.setAmount(dto.getAmount());
-        transaction.setType(dto.getType());
-        transaction.setCategory(category);
-        transaction.setDate(dto.getDate() != null ? dto.getDate() : LocalDateTime.now());
+        // ⭐ Validar que la categoría pertenezca al usuario (o sea del sistema)
+        if (category.getUserId() != null && !category.getUserId().equals(userId)) {
+            throw new RuntimeException("La categoría no te pertenece");
+        }
+
+        Transaction transaction = Transaction.builder()
+                .userId(userId)
+                .description(dto.getDescription())
+                .amount(dto.getAmount())
+                .type(dto.getType())
+                .category(category)
+                .date(dto.getDate() != null ? dto.getDate() : LocalDateTime.now())
+                .notes(dto.getNotes())
+                .linkedToInvestment(dto.getLinkedToInvestment() != null ? dto.getLinkedToInvestment() : false)
+                .investmentId(dto.getInvestmentId())
+                .build();
 
         return transactionRepository.save(transaction);
     }
 
     /**
-     * Obtiene todas las transacciones
+     * Obtiene todas las transacciones de un usuario
      */
     @Transactional(readOnly = true)
-    public List<Transaction> findAll() {
-        return transactionRepository.findAll();
+    public List<Transaction> findAll(UUID userId) {
+        return transactionRepository.findByUserId(userId);
     }
 
     /**
-     * Busca una transacción por ID
+     * Busca una transacción por ID y valida que pertenezca al usuario
      */
     @Transactional(readOnly = true)
-    public Transaction findById(Long id) {
-        return transactionRepository.findById(id)
+    public Transaction findById(UUID userId, Long id) {
+        Transaction transaction = transactionRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Transacción no encontrada con ID: " + id));
+
+        if (!transaction.getUserId().equals(userId)) {
+            throw new RuntimeException("Esta transacción no te pertenece");
+        }
+
+        return transaction;
     }
 
     /**
      * Actualiza una transacción existente
      */
-    public Transaction update(Long id, TransactionDTO dto) {
-        Transaction transaction = findById(id);
+    public Transaction update(UUID userId, Long id, TransactionDTO dto) {
+        Transaction transaction = findById(userId, id);
 
         if (dto.getCategoryId() != null) {
             CategoryType category = categoryRepository.findById(dto.getCategoryId())
                     .orElseThrow(() -> new ResourceNotFoundException("Categoría no encontrada con ID: " + dto.getCategoryId()));
+
+            // ⭐ Validar que la categoría pertenezca al usuario (o sea del sistema)
+            if (category.getUserId() != null && !category.getUserId().equals(userId)) {
+                throw new RuntimeException("La categoría no te pertenece");
+            }
+
             transaction.setCategory(category);
         }
 
@@ -82,6 +105,9 @@ public class TransactionService {
         if (dto.getDate() != null) {
             transaction.setDate(dto.getDate());
         }
+        if (dto.getNotes() != null) {
+            transaction.setNotes(dto.getNotes());
+        }
 
         return transactionRepository.save(transaction);
     }
@@ -89,72 +115,70 @@ public class TransactionService {
     /**
      * Elimina una transacción
      */
-    public void delete(Long id) {
-        if (!transactionRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Transacción no encontrada con ID: " + id);
-        }
-        transactionRepository.deleteById(id);
+    public void delete(UUID userId, Long id) {
+        Transaction transaction = findById(userId, id);
+        transactionRepository.delete(transaction);
     }
 
     /**
      * Obtiene transacciones por tipo (INCOME/EXPENSE)
      */
     @Transactional(readOnly = true)
-    public List<Transaction> findByType(TransactionType type) {
-        return transactionRepository.findByType(type);
+    public List<Transaction> findByType(UUID userId, TransactionType type) {
+        return transactionRepository.findByUserIdAndType(userId, type);
     }
 
     /**
      * Obtiene transacciones por categoría
      */
     @Transactional(readOnly = true)
-    public List<Transaction> findByCategory(Long categoryId) {
-        return transactionRepository.findByCategoryId(categoryId);
+    public List<Transaction> findByCategory(UUID userId, Long categoryId) {
+        return transactionRepository.findByUserIdAndCategoryId(userId, categoryId);
     }
 
     /**
      * Obtiene transacciones en un rango de fechas
      */
     @Transactional(readOnly = true)
-    public List<Transaction> findByDateRange(LocalDateTime startDate, LocalDateTime endDate) {
-        return transactionRepository.findByDateBetween(startDate, endDate);
+    public List<Transaction> findByDateRange(UUID userId, LocalDateTime startDate, LocalDateTime endDate) {
+        return transactionRepository.findByUserIdAndDateBetween(userId, startDate, endDate);
     }
 
     /**
      * Obtiene las últimas 10 transacciones
      */
     @Transactional(readOnly = true)
-    public List<Transaction> findRecentTransactions() {
-        return transactionRepository.findTop10ByOrderByDateDesc();
+    public List<Transaction> findRecentTransactions(UUID userId) {
+        return transactionRepository.findTop10ByUserIdOrderByDateDesc(userId);
     }
 
     /**
      * Busca transacciones por descripción
      */
     @Transactional(readOnly = true)
-    public List<Transaction> searchByDescription(String keyword) {
-        return transactionRepository.findByDescriptionContainingIgnoreCase(keyword);
+    public List<Transaction> searchByDescription(UUID userId, String keyword) {
+        return transactionRepository.findByUserIdAndDescriptionContainingIgnoreCase(userId, keyword);
     }
 
     /**
      * Obtiene transacciones de un mes específico
      */
     @Transactional(readOnly = true)
-    public List<Transaction> findByMonth(int year, int month) {
-        return transactionRepository.findByYearAndMonth(year, month);
+    public List<Transaction> findByMonth(UUID userId, int year, int month) {
+        return transactionRepository.findByUserIdAndYearAndMonth(userId, year, month);
     }
 
     /**
      * Calcula el balance general (ingresos - gastos)
      */
     @Transactional(readOnly = true)
-    public BalanceDTO calculateBalance() {
-        BigDecimal totalIncome = transactionRepository.sumByType(TransactionType.INCOME);
-        BigDecimal totalExpense = transactionRepository.sumByType(TransactionType.EXPENSE);
+    public BalanceDTO calculateBalance(UUID userId) {
+        BigDecimal totalIncome = transactionRepository.sumByUserIdAndType(userId, TransactionType.INCOME);
+        BigDecimal totalExpense = transactionRepository.sumByUserIdAndType(userId, TransactionType.EXPENSE);
         BigDecimal balance = totalIncome.subtract(totalExpense);
 
-        Long incomeCount = transactionRepository.countByType(TransactionType.INCOME);
-        Long expenseCount = transactionRepository.countByType(TransactionType.EXPENSE);
+        Long incomeCount = transactionRepository.countByUserIdAndType(userId, TransactionType.INCOME);
+        Long expenseCount = transactionRepository.countByUserIdAndType(userId, TransactionType.EXPENSE);
 
         return BalanceDTO.builder()
                 .totalIncome(totalIncome)
@@ -170,9 +194,9 @@ public class TransactionService {
      * Calcula el balance en un rango de fechas
      */
     @Transactional(readOnly = true)
-    public BalanceDTO calculateBalanceByDateRange(LocalDateTime startDate, LocalDateTime endDate) {
-        BigDecimal totalIncome = transactionRepository.sumByTypeAndDateBetween(TransactionType.INCOME, startDate, endDate);
-        BigDecimal totalExpense = transactionRepository.sumByTypeAndDateBetween(TransactionType.EXPENSE, startDate, endDate);
+    public BalanceDTO calculateBalanceByDateRange(UUID userId, LocalDateTime startDate, LocalDateTime endDate) {
+        BigDecimal totalIncome = transactionRepository.sumByUserIdAndTypeAndDateBetween(userId, TransactionType.INCOME, startDate, endDate);
+        BigDecimal totalExpense = transactionRepository.sumByUserIdAndTypeAndDateBetween(userId, TransactionType.EXPENSE, startDate, endDate);
         BigDecimal balance = totalIncome.subtract(totalExpense);
 
         return BalanceDTO.builder()
@@ -197,6 +221,9 @@ public class TransactionService {
                 .categoryId(transaction.getCategory() != null ? transaction.getCategory().getId() : null)
                 .categoryName(transaction.getCategory() != null ? transaction.getCategory().getName() : null)
                 .date(transaction.getDate())
+                .notes(transaction.getNotes())
+                .linkedToInvestment(transaction.getLinkedToInvestment())
+                .investmentId(transaction.getInvestmentId())
                 .build();
     }
 

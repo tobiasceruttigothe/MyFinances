@@ -37,5 +37,16 @@ public class TransactionDTO {
 
     private LocalDateTime date;
 
-    private String notes; // Notas adicionales opcionales
+    @Size(max = 500, message = "Las notas no pueden exceder los 500 caracteres")
+    private String notes;
+
+    /**
+     * Indica si esta transacción está vinculada a una inversión
+     */
+    private Boolean linkedToInvestment;
+
+    /**
+     * ID de la inversión relacionada (si existe)
+     */
+    private Long investmentId;
 }

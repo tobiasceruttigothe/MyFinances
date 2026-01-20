@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/reports")
@@ -21,9 +22,10 @@ public class ReportController {
      */
     @GetMapping("/monthly")
     public ResponseEntity<MonthlySummaryDTO> getMonthlySummary(
+            @RequestHeader("X-User-Id") UUID userId,
             @RequestParam int year,
             @RequestParam int month) {
-        return ResponseEntity.ok(reportService.getMonthlySummary(year, month));
+        return ResponseEntity.ok(reportService.getMonthlySummary(userId, year, month));
     }
 
     /**
@@ -31,9 +33,10 @@ public class ReportController {
      */
     @GetMapping("/expenses/by-category")
     public ResponseEntity<List<CategorySummaryDTO>> getExpensesByCategory(
+            @RequestHeader("X-User-Id") UUID userId,
             @RequestParam int year,
             @RequestParam int month) {
-        return ResponseEntity.ok(reportService.getExpensesByCategory(year, month));
+        return ResponseEntity.ok(reportService.getExpensesByCategory(userId, year, month));
     }
 
     /**
@@ -41,25 +44,28 @@ public class ReportController {
      */
     @GetMapping("/incomes/by-category")
     public ResponseEntity<List<CategorySummaryDTO>> getIncomesByCategory(
+            @RequestHeader("X-User-Id") UUID userId,
             @RequestParam int year,
             @RequestParam int month) {
-        return ResponseEntity.ok(reportService.getIncomesByCategory(year, month));
+        return ResponseEntity.ok(reportService.getIncomesByCategory(userId, year, month));
     }
 
     /**
      * Obtener todos los gastos agrupados por categoría (histórico completo)
      */
     @GetMapping("/expenses/all-by-category")
-    public ResponseEntity<CategorySummaryDTO.CategorySummaryResponse> getAllExpensesByCategory() {
-        return ResponseEntity.ok(reportService.getAllExpensesByCategory());
+    public ResponseEntity<CategorySummaryDTO.CategorySummaryResponse> getAllExpensesByCategory(
+            @RequestHeader("X-User-Id") UUID userId) {
+        return ResponseEntity.ok(reportService.getAllExpensesByCategory(userId));
     }
 
     /**
      * Obtener todos los ingresos agrupados por categoría (histórico completo)
      */
     @GetMapping("/incomes/all-by-category")
-    public ResponseEntity<CategorySummaryDTO.CategorySummaryResponse> getAllIncomesByCategory() {
-        return ResponseEntity.ok(reportService.getAllIncomesByCategory());
+    public ResponseEntity<CategorySummaryDTO.CategorySummaryResponse> getAllIncomesByCategory(
+            @RequestHeader("X-User-Id") UUID userId) {
+        return ResponseEntity.ok(reportService.getAllIncomesByCategory(userId));
     }
 
     /**
@@ -67,8 +73,8 @@ public class ReportController {
      */
     @GetMapping("/monthly-comparison")
     public ResponseEntity<List<MonthlySummaryDTO>> getMonthlyComparison(
+            @RequestHeader("X-User-Id") UUID userId,
             @RequestParam(defaultValue = "6") int months) {
-        return ResponseEntity.ok(reportService.getMonthlyComparison(months));
+        return ResponseEntity.ok(reportService.getMonthlyComparison(userId, months));
     }
 }
-
