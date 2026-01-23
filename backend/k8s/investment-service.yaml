@@ -22,15 +22,21 @@ spec:
             - name: CONFIG_SERVER_URL
               value: "http://config-server:8888"
             
-            # --- CAMBIO 1: Desactivar Eureka ---
-            # Ya no queremos que se registre, usaremos DNS de K8s
-            - name: EUREKA_CLIENT_ENABLED
-              value: "false"
+            # Base de datos
+            - name: SPRING_DATASOURCE_URL
+              value: "jdbc:postgresql://postgres-db:5432/investment_db"
+            - name: SPRING_DATASOURCE_USERNAME
+              value: "myfinances_user"
+            - name: SPRING_DATASOURCE_PASSWORD
+              value: "myfinances_pass"
             
-            # --- CAMBIO 2: Conectar Observabilidad ---
-            # Apuntamos al servicio 'zipkin' dentro del cluster
+            # Observabilidad
             - name: MANAGEMENT_ZIPKIN_TRACING_ENDPOINT
               value: "http://zipkin:9411/api/v2/spans"
+            
+            # Service URLs
+            - name: SERVICES_ACCOUNT_SERVICE_URL
+              value: "http://account-service:8081"
 ---
 apiVersion: v1
 kind: Service

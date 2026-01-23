@@ -1,6 +1,7 @@
 package com.myfinances.account.controller;
 
 import com.myfinances.account.dto.CategoryDTO;
+import com.myfinances.account.exception.BadRequestException;
 import com.myfinances.account.model.CategoryType;
 import com.myfinances.account.service.CategoryInitializationService;
 import com.myfinances.account.service.CategoryService;
@@ -31,6 +32,12 @@ public class CategoryController {
     public ResponseEntity<CategoryDTO> create(
             @RequestHeader("X-User-Id") UUID userId,
             @Valid @RequestBody CategoryDTO dto) {
+
+        // ⭐ Validar que el tipo sea obligatorio al crear
+        if (dto.getType() == null) {
+            throw new BadRequestException("El tipo es obligatorio al crear una categoría (INCOME/EXPENSE)");
+        }
+
         CategoryType category = service.create(userId, dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(service.toDTO(userId, category));
     }

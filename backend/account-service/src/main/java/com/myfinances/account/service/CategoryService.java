@@ -32,12 +32,13 @@ public class CategoryService {
             throw new BadRequestException("Ya tienes una categoría con el nombre: " + dto.getName());
         }
 
-        // Si tiene parentId, validar que exista y pertenezca al usuario
+        // Si tiene parentId, validar que exista
         if (dto.getParentId() != null) {
             CategoryType parent = categoryRepository.findById(dto.getParentId())
                     .orElseThrow(() -> new ResourceNotFoundException("Categoría padre no encontrada"));
 
-            if (!parent.getUserId().equals(userId)) {
+            // ⭐ Validar que la categoría padre pertenezca al usuario O sea del sistema
+            if (parent.getUserId() != null && !parent.getUserId().equals(userId)) {
                 throw new BadRequestException("La categoría padre no te pertenece");
             }
 
