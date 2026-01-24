@@ -1,9 +1,7 @@
 package com.myfinances.investment.service;
 
 import com.myfinances.investment.client.AccountServiceClient;
-import com.myfinances.investment.dto.InvestmentDTO;
-import com.myfinances.investment.dto.InvestmentSummaryDTO;
-import com.myfinances.investment.dto.PortfolioSummaryDTO;
+import com.myfinances.investment.dto.*;
 import com.myfinances.investment.exception.ResourceNotFoundException;
 import com.myfinances.investment.model.Investment;
 import com.myfinances.investment.repository.InvestmentRepository;
@@ -29,10 +27,7 @@ public class InvestmentService {
     private final AccountServiceClient accountServiceClient;
     private final UserSettingsService userSettingsService;
 
-    /**
-     * ⭐ Crea una nueva inversión
-     */
-    public Investment create(UUID userId, InvestmentDTO dto) {
+    public Investment create(UUID userId, CreateInvestmentDTO dto) {
         Investment investment = Investment.builder()
                 .userId(userId)
                 .type(dto.getType().toUpperCase())
@@ -56,8 +51,7 @@ public class InvestmentService {
             try {
                 createLinkedTransaction(userId, investment);
             } catch (Exception e) {
-                log.error("Error creando transacción vinculada para inversión {}: {}", investment.getId(), e.getMessage());
-                // No fallar la creación de la inversión si falla la transacción
+                log.error("Error creando transacción vinculada: {}", e.getMessage());
             }
         }
 
@@ -130,7 +124,8 @@ public class InvestmentService {
     /**
      * Actualiza una inversión
      */
-    public Investment update(UUID userId, Long id, InvestmentDTO dto) {
+
+    public Investment update(UUID userId, Long id, UpdateInvestmentDTO dto) {
         Investment investment = findById(userId, id);
 
         if (dto.getType() != null) {
@@ -148,7 +143,6 @@ public class InvestmentService {
 
         return investmentRepository.save(investment);
     }
-
     /**
      * Elimina una inversión
      */
@@ -263,11 +257,8 @@ public class InvestmentService {
                 .build();
     }
 
-    /**
-     * Convierte Investment a DTO
-     */
-    public InvestmentDTO toDTO(Investment investment) {
-        return InvestmentDTO.builder()
+    public InvestmentResponseDTO toResponseDTO(Investment investment) {
+        return InvestmentResponseDTO.builder()
                 .id(investment.getId())
                 .type(investment.getType())
                 .description(investment.getDescription())
@@ -284,12 +275,9 @@ public class InvestmentService {
                 .build();
     }
 
-    /**
-     * Convierte lista de inversiones a DTOs
-     */
-    public List<InvestmentDTO> toDTOList(List<Investment> investments) {
+    public List<InvestmentResponseDTO> toResponseDTOList(List<Investment> investments) {
         return investments.stream()
-                .map(this::toDTO)
-                .collect(Collectors.toList());
+                .map(this::toResponseDTO)
+                .toList();
     }
 }

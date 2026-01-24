@@ -1,6 +1,6 @@
 package com.myfinances.account.service;
 
-import com.myfinances.account.dto.CategoryDTO;
+import com.myfinances.account.dto.*;
 import com.myfinances.account.exception.BadRequestException;
 import com.myfinances.account.exception.ResourceNotFoundException;
 import com.myfinances.account.model.CategoryType;
@@ -26,7 +26,7 @@ public class CategoryService {
     /**
      * ⭐ Crea una nueva categoría para un usuario
      */
-    public CategoryType create(UUID userId, CategoryDTO dto) {
+    public CategoryType create(UUID userId, CreateCategoryDTO dto) {
         // Validar que no exista una categoría con ese nombre para el usuario
         if (categoryRepository.existsByUserIdAndNameIgnoreCase(userId, dto.getName())) {
             throw new BadRequestException("Ya tienes una categoría con el nombre: " + dto.getName());
@@ -112,7 +112,7 @@ public class CategoryService {
     /**
      * Actualiza una categoría
      */
-    public CategoryType update(UUID userId, Long id, CategoryDTO dto) {
+    public CategoryType update(UUID userId, Long id, UpdateCategoryDTO dto) {
         CategoryType category = findById(userId, id);
 
         // ⭐ No permitir modificar categorías del sistema
@@ -121,9 +121,12 @@ public class CategoryService {
         }
 
         // Validar cambio de nombre
-        if (!category.getName().equalsIgnoreCase(dto.getName()) &&
-                categoryRepository.existsByUserIdAndNameIgnoreCase(userId, dto.getName())) {
-            throw new BadRequestException("Ya tienes una categoría con el nombre: " + dto.getName());
+        if (dto.getName() != null) {
+            if (!category.getName().equalsIgnoreCase(dto.getName()) &&
+                    categoryRepository.existsByUserIdAndNameIgnoreCase(userId, dto.getName())) {
+                throw new BadRequestException("Ya tienes una categoría con el nombre: " + dto.getName());
+            }
+            category.setName(dto.getName().toUpperCase());
         }
 
         // Validar cambio de padre
@@ -138,11 +141,13 @@ public class CategoryService {
             if (newParent.getType() != category.getType()) {
                 throw new BadRequestException("La categoría padre debe ser del mismo tipo");
             }
+
+            category.setParentId(dto.getParentId());
         }
 
-        category.setName(dto.getName().toUpperCase());
-        category.setDescription(dto.getDescription());
-        category.setParentId(dto.getParentId());
+        if (dto.getDescription() != null) {
+            category.setDescription(dto.getDescription());
+        }
 
         return categoryRepository.save(category);
     }
@@ -185,14 +190,27 @@ public class CategoryService {
         return transactionRepository.sumByUserIdAndCategoryId(userId, categoryId);
     }
 
-    /**
-     * Convierte una entidad CategoryType a DTO con datos enriquecidos
-     */
-    public CategoryDTO toDTO(UUID userId, CategoryType category) {
-        Long transactionCount = (long) transactionRepository.findByUserIdAndCategoryId(userId, category.getId()).size();
-        BigDecimal totalAmount = transactionRepository.sumByUserIdAndCategoryId(userId, category.getId());
+    // ==================== MAPEO A DTOs ====================
 
-        return CategoryDTO.builder()
+    /**
+     * Convierte una entidad CategoryType a ResponseDTO con datos enriquecidos
+     */
+    public CategoryResponseDTO toResponseDTO(CategoryType category) {
+        // Si es categoría del sistema, userId será null
+        UUID userId = category.getUserId();
+
+        Long transactionCount = 0L;
+        BigDecimal totalAmount = BigDecimal.ZERO;
+
+        // Solo calcular si es una categoría de usuario (no del sistema)
+        if (userId != null) {
+            transactionCount = (long) transactionRepository
+                    .findByUserIdAndCategoryId(userId, category.getId()).size();
+            totalAmount = transactionRepository
+                    .sumByUserIdAndCategoryId(userId, category.getId());
+        }
+
+        return CategoryResponseDTO.builder()
                 .id(category.getId())
                 .name(category.getName())
                 .type(category.getType())
@@ -204,11 +222,11 @@ public class CategoryService {
     }
 
     /**
-     * Convierte una lista de categorías a DTOs
+     * Convierte una lista de categorías a ResponseDTOs
      */
-    public List<CategoryDTO> toDTOList(UUID userId, List<CategoryType> categories) {
+    public List<CategoryResponseDTO> toResponseDTOList(List<CategoryType> categories) {
         return categories.stream()
-                .map(cat -> toDTO(userId, cat))
+                .map(this::toResponseDTO)
                 .toList();
     }
 }

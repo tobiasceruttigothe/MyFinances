@@ -1,7 +1,6 @@
 package com.myfinances.account.service;
 
-import com.myfinances.account.dto.BalanceDTO;
-import com.myfinances.account.dto.TransactionDTO;
+import com.myfinances.account.dto.*;
 import com.myfinances.account.exception.ResourceNotFoundException;
 import com.myfinances.account.model.CategoryType;
 import com.myfinances.account.model.Transaction;
@@ -25,12 +24,13 @@ public class TransactionService {
     private final TransactionRepository transactionRepository;
     private final CategoryRepository categoryRepository;
 
+
     /**
      * ⭐ Guarda una nueva transacción
      */
-    public Transaction save(UUID userId, TransactionDTO dto) {
+    public Transaction save(UUID userId, CreateTransactionDTO dto) {
         CategoryType category = categoryRepository.findById(dto.getCategoryId())
-                .orElseThrow(() -> new ResourceNotFoundException("Categoría no encontrada con ID: " + dto.getCategoryId()));
+                .orElseThrow(() -> new ResourceNotFoundException("Categoría no encontrada"));
 
         // ⭐ Validar que la categoría pertenezca al usuario (o sea del sistema)
         if (category.getUserId() != null && !category.getUserId().equals(userId)) {
@@ -78,20 +78,8 @@ public class TransactionService {
     /**
      * Actualiza una transacción existente
      */
-    public Transaction update(UUID userId, Long id, TransactionDTO dto) {
+    public Transaction update(UUID userId, Long id, UpdateTransactionDTO dto) {
         Transaction transaction = findById(userId, id);
-
-        if (dto.getCategoryId() != null) {
-            CategoryType category = categoryRepository.findById(dto.getCategoryId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Categoría no encontrada con ID: " + dto.getCategoryId()));
-
-            // ⭐ Validar que la categoría pertenezca al usuario (o sea del sistema)
-            if (category.getUserId() != null && !category.getUserId().equals(userId)) {
-                throw new RuntimeException("La categoría no te pertenece");
-            }
-
-            transaction.setCategory(category);
-        }
 
         if (dto.getDescription() != null) {
             transaction.setDescription(dto.getDescription());
@@ -101,6 +89,14 @@ public class TransactionService {
         }
         if (dto.getType() != null) {
             transaction.setType(dto.getType());
+        }
+        if (dto.getCategoryId() != null) {
+            CategoryType category = categoryRepository.findById(dto.getCategoryId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Categoría no encontrada"));
+            if (category.getUserId() != null && !category.getUserId().equals(userId)) {
+                throw new RuntimeException("La categoría no te pertenece");
+            }
+            transaction.setCategory(category);
         }
         if (dto.getDate() != null) {
             transaction.setDate(dto.getDate());
@@ -209,11 +205,8 @@ public class TransactionService {
                 .build();
     }
 
-    /**
-     * Convierte una entidad Transaction a DTO
-     */
-    public TransactionDTO toDTO(Transaction transaction) {
-        return TransactionDTO.builder()
+    public TransactionResponseDTO toResponseDTO(Transaction transaction) {
+        return TransactionResponseDTO.builder()
                 .id(transaction.getId())
                 .description(transaction.getDescription())
                 .amount(transaction.getAmount())
@@ -230,9 +223,9 @@ public class TransactionService {
     /**
      * Convierte una lista de transacciones a DTOs
      */
-    public List<TransactionDTO> toDTOList(List<Transaction> transactions) {
+    public List<TransactionResponseDTO> toResponseDTOList(List<Transaction> transactions) {
         return transactions.stream()
-                .map(this::toDTO)
+                .map(this::toResponseDTO)
                 .toList();
     }
 }

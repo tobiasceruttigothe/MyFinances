@@ -1,8 +1,6 @@
 package com.myfinances.account.controller;
 
-import com.myfinances.account.dto.BalanceDTO;
-import com.myfinances.account.dto.TransactionDTO;
-import com.myfinances.account.model.Transaction;
+import com.myfinances.account.dto.*;
 import com.myfinances.account.model.TransactionType;
 import com.myfinances.account.service.TransactionService;
 import jakarta.validation.Valid;
@@ -30,41 +28,43 @@ public class TransactionController {
      * Crear una nueva transacción
      */
     @PostMapping
-    public ResponseEntity<TransactionDTO> create(
+    public ResponseEntity<TransactionResponseDTO> create(
             @RequestHeader("X-User-Id") UUID userId,
-            @Valid @RequestBody TransactionDTO dto) {
-        Transaction transaction = service.save(userId, dto);
-        return ResponseEntity.status(HttpStatus.CREATED).body(service.toDTO(transaction));
+            @Valid @RequestBody CreateTransactionDTO dto) {
+
+        var transaction = service.save(userId, dto);
+        return ResponseEntity.status(HttpStatus.CREATED).body(service.toResponseDTO(transaction));
     }
 
     /**
      * Obtener todas las transacciones
      */
     @GetMapping
-    public ResponseEntity<List<TransactionDTO>> getAll(@RequestHeader("X-User-Id") UUID userId) {
-        return ResponseEntity.ok(service.toDTOList(service.findAll(userId)));
+    public ResponseEntity<List<TransactionResponseDTO>> getAll(@RequestHeader("X-User-Id") UUID userId) {
+        return ResponseEntity.ok(service.toResponseDTOList(service.findAll(userId)));
     }
 
     /**
      * Obtener una transacción por ID
      */
     @GetMapping("/{id}")
-    public ResponseEntity<TransactionDTO> getById(
+    public ResponseEntity<TransactionResponseDTO> getById(
             @RequestHeader("X-User-Id") UUID userId,
             @PathVariable Long id) {
-        return ResponseEntity.ok(service.toDTO(service.findById(userId, id)));
+        return ResponseEntity.ok(service.toResponseDTO(service.findById(userId, id)));
     }
 
     /**
      * Actualizar una transacción
      */
     @PutMapping("/{id}")
-    public ResponseEntity<TransactionDTO> update(
+    public ResponseEntity<TransactionResponseDTO> update(
             @RequestHeader("X-User-Id") UUID userId,
             @PathVariable Long id,
-            @RequestBody TransactionDTO dto) {
-        Transaction transaction = service.update(userId, id, dto);
-        return ResponseEntity.ok(service.toDTO(transaction));
+            @Valid @RequestBody UpdateTransactionDTO dto) {
+
+        var transaction = service.update(userId, id, dto);
+        return ResponseEntity.ok(service.toResponseDTO(transaction));
     }
 
     /**
@@ -82,60 +82,60 @@ public class TransactionController {
      * Obtener transacciones por tipo (INCOME/EXPENSE)
      */
     @GetMapping("/type/{type}")
-    public ResponseEntity<List<TransactionDTO>> getByType(
+    public ResponseEntity<List<TransactionResponseDTO>> getByType(
             @RequestHeader("X-User-Id") UUID userId,
             @PathVariable TransactionType type) {
-        return ResponseEntity.ok(service.toDTOList(service.findByType(userId, type)));
+        return ResponseEntity.ok(service.toResponseDTOList(service.findByType(userId, type)));
     }
 
     /**
      * Obtener transacciones por categoría
      */
     @GetMapping("/category/{categoryId}")
-    public ResponseEntity<List<TransactionDTO>> getByCategory(
+    public ResponseEntity<List<TransactionResponseDTO>> getByCategory(
             @RequestHeader("X-User-Id") UUID userId,
             @PathVariable Long categoryId) {
-        return ResponseEntity.ok(service.toDTOList(service.findByCategory(userId, categoryId)));
+        return ResponseEntity.ok(service.toResponseDTOList(service.findByCategory(userId, categoryId)));
     }
 
     /**
      * Obtener transacciones en un rango de fechas
      */
     @GetMapping("/date-range")
-    public ResponseEntity<List<TransactionDTO>> getByDateRange(
+    public ResponseEntity<List<TransactionResponseDTO>> getByDateRange(
             @RequestHeader("X-User-Id") UUID userId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate) {
-        return ResponseEntity.ok(service.toDTOList(service.findByDateRange(userId, startDate, endDate)));
+        return ResponseEntity.ok(service.toResponseDTOList(service.findByDateRange(userId, startDate, endDate)));
     }
 
     /**
      * Obtener transacciones de un mes específico
      */
     @GetMapping("/month")
-    public ResponseEntity<List<TransactionDTO>> getByMonth(
+    public ResponseEntity<List<TransactionResponseDTO>> getByMonth(
             @RequestHeader("X-User-Id") UUID userId,
             @RequestParam int year,
             @RequestParam int month) {
-        return ResponseEntity.ok(service.toDTOList(service.findByMonth(userId, year, month)));
+        return ResponseEntity.ok(service.toResponseDTOList(service.findByMonth(userId, year, month)));
     }
 
     /**
      * Obtener las últimas 10 transacciones
      */
     @GetMapping("/recent")
-    public ResponseEntity<List<TransactionDTO>> getRecentTransactions(@RequestHeader("X-User-Id") UUID userId) {
-        return ResponseEntity.ok(service.toDTOList(service.findRecentTransactions(userId)));
+    public ResponseEntity<List<TransactionResponseDTO>> getRecentTransactions(@RequestHeader("X-User-Id") UUID userId) {
+        return ResponseEntity.ok(service.toResponseDTOList(service.findRecentTransactions(userId)));
     }
 
     /**
      * Buscar transacciones por descripción
      */
     @GetMapping("/search")
-    public ResponseEntity<List<TransactionDTO>> searchByDescription(
+    public ResponseEntity<List<TransactionResponseDTO>> searchByDescription(
             @RequestHeader("X-User-Id") UUID userId,
             @RequestParam String keyword) {
-        return ResponseEntity.ok(service.toDTOList(service.searchByDescription(userId, keyword)));
+        return ResponseEntity.ok(service.toResponseDTOList(service.searchByDescription(userId, keyword)));
     }
 
     /**

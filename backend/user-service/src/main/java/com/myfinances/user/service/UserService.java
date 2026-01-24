@@ -26,25 +26,19 @@ public class UserService {
     private final KeycloakService keycloakService;
     private final AccountServiceClient accountServiceClient;
 
-    /**
-     * 📝 REGISTRO DE USUARIO
-     */
-    public UserDTO register(RegisterRequest request) {
-        // 1. Validar que no exista
+    public UserProfileResponseDTO register(RegisterRequest request) {
+
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new UserAlreadyExistsException("Ya existe un usuario con ese email");
         }
         if (userRepository.existsByUsername(request.getUsername())) {
             throw new UserAlreadyExistsException("Ya existe un usuario con ese username");
         }
-
         try {
-            // 2. Crear usuario en Keycloak
             UUID keycloakUserId = keycloakService.createUser(request);
 
-            // 3. Crear usuario en nuestra BD con el UUID de Keycloak
             User user = User.builder()
-                    .id(keycloakUserId) // ⭐ Usamos el UUID de Keycloak
+                    .id(keycloakUserId)
                     .email(request.getEmail())
                     .username(request.getUsername())
                     .firstName(request.getFirstName())
@@ -53,9 +47,7 @@ public class UserService {
                     .build();
 
             user = userRepository.save(user);
-            log.info("Usuario guardado en BD: {}", user.getId());
 
-            // 4. Crear configuraciones por defecto
             UserSettings settings = UserSettings.builder()
                     .user(user)
                     .linkInvestmentsToTransactions(false)
@@ -68,17 +60,13 @@ public class UserService {
             userSettingsRepository.save(settings);
             log.info("Settings creados para usuario: {}", user.getId());
 
-            // 5. ⭐ Inicializar categorías predefinidas (llamada a account-service)
             try {
                 accountServiceClient.initializeUserCategories(user.getId());
-                log.info("Categorías predefinidas creadas para usuario: {}", user.getId());
             } catch (Exception e) {
-                log.error("Error creando categorías para usuario {}: {}", user.getId(), e.getMessage());
-                // No fallamos el registro si falla esto
+                log.error("Error creando categorías: {}", e.getMessage());
             }
 
-            return toDTO(user, settings);
-
+            return toResponseDTO(user, settings);
         } catch (Exception e) {
             log.error("Error en registro de usuario", e);
             throw e;
@@ -94,7 +82,7 @@ public class UserService {
 
         // 2. Buscar usuario en nuestra BD por email
         User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado en BD local"));
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
         // 3. Construir respuesta
         return LoginResponse.builder()
@@ -121,20 +109,17 @@ public class UserService {
      * 👤 Obtener perfil de usuario
      */
     @Transactional(readOnly = true)
-    public UserDTO getUserProfile(UUID userId) {
+    public UserProfileResponseDTO getUserProfile(UUID userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
         UserSettings settings = userSettingsRepository.findByUserId(userId)
                 .orElse(null);
 
-        return toDTO(user, settings);
+        return toResponseDTO(user, settings);
     }
 
-    /**
-     * ✏️ Actualizar perfil
-     */
-    public UserDTO updateProfile(UUID userId, UserDTO updates) {
+    public UserProfileResponseDTO updateProfile(UUID userId, UpdateUserProfileDTO updates) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
@@ -173,7 +158,7 @@ public class UserService {
 
         settings = userSettingsRepository.save(settings);
 
-        return toDTO(savedUser, settings);
+        return toResponseDTO(savedUser, settings);
     }
 
     /**
@@ -189,20 +174,19 @@ public class UserService {
         // Eliminar de BD (cascade borrará settings)
         userRepository.delete(user);
 
-        log.info("Usuario eliminado completamente: {}", userId);
+        log.info("Usuario eliminado: {}", userId);
     }
 
-    /**
-     * 🔧 Convertir a DTO
-     */
-    private UserDTO toDTO(User user, UserSettings settings) {
-        UserDTO.UserDTOBuilder builder = UserDTO.builder()
+    private UserProfileResponseDTO toResponseDTO(User user, UserSettings settings) {
+        UserProfileResponseDTO.UserProfileResponseDTOBuilder builder = UserProfileResponseDTO.builder()
                 .id(user.getId())
                 .email(user.getEmail())
                 .username(user.getUsername())
                 .firstName(user.getFirstName())
                 .lastName(user.getLastName())
-                .enabled(user.getEnabled());
+                .enabled(user.getEnabled())
+                .createdAt(user.getCreatedAt())
+                .updatedAt(user.getUpdatedAt());
 
         if (settings != null) {
             builder

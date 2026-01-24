@@ -1,7 +1,6 @@
 package com.myfinances.investment.controller;
 
-import com.myfinances.investment.dto.InvestmentDTO;
-import com.myfinances.investment.dto.PortfolioSummaryDTO;
+import com.myfinances.investment.dto.*;
 import com.myfinances.investment.model.Investment;
 import com.myfinances.investment.service.InvestmentService;
 import jakarta.validation.Valid;
@@ -28,51 +27,53 @@ public class InvestmentController {
      * Crear una nueva inversión
      */
     @PostMapping
-    public ResponseEntity<InvestmentDTO> create(
+    public ResponseEntity<InvestmentResponseDTO> create(
             @RequestHeader("X-User-Id") UUID userId,
-            @Valid @RequestBody InvestmentDTO dto) {
+            @Valid @RequestBody CreateInvestmentDTO dto) {
+
         Investment investment = service.create(userId, dto);
-        return ResponseEntity.status(HttpStatus.CREATED).body(service.toDTO(investment));
+        return ResponseEntity.status(HttpStatus.CREATED).body(service.toResponseDTO(investment));
     }
 
     /**
      * Obtener todas las inversiones del usuario
      */
     @GetMapping
-    public ResponseEntity<List<InvestmentDTO>> getAll(@RequestHeader("X-User-Id") UUID userId) {
-        return ResponseEntity.ok(service.toDTOList(service.findAll(userId)));
+    public ResponseEntity<List<InvestmentResponseDTO>> getAll(@RequestHeader("X-User-Id") UUID userId) {
+        return ResponseEntity.ok(service.toResponseDTOList(service.findAll(userId)));
     }
 
     /**
      * Obtener una inversión por ID
      */
     @GetMapping("/{id}")
-    public ResponseEntity<InvestmentDTO> getById(
+    public ResponseEntity<InvestmentResponseDTO> getById(
             @RequestHeader("X-User-Id") UUID userId,
             @PathVariable Long id) {
-        return ResponseEntity.ok(service.toDTO(service.findById(userId, id)));
+        return ResponseEntity.ok(service.toResponseDTO(service.findById(userId, id)));
     }
 
     /**
      * Obtener inversiones por tipo
      */
     @GetMapping("/type/{type}")
-    public ResponseEntity<List<InvestmentDTO>> getByType(
+    public ResponseEntity<List<InvestmentResponseDTO>> getByType(
             @RequestHeader("X-User-Id") UUID userId,
             @PathVariable String type) {
-        return ResponseEntity.ok(service.toDTOList(service.findByType(userId, type)));
+        return ResponseEntity.ok(service.toResponseDTOList(service.findByType(userId, type)));
     }
 
     /**
      * Actualizar una inversión
      */
     @PutMapping("/{id}")
-    public ResponseEntity<InvestmentDTO> update(
+    public ResponseEntity<InvestmentResponseDTO> update(
             @RequestHeader("X-User-Id") UUID userId,
             @PathVariable Long id,
-            @Valid @RequestBody InvestmentDTO dto) {
+            @Valid @RequestBody UpdateInvestmentDTO dto) {
+
         Investment investment = service.update(userId, id, dto);
-        return ResponseEntity.ok(service.toDTO(investment));
+        return ResponseEntity.ok(service.toResponseDTO(investment));
     }
 
     /**

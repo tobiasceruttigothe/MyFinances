@@ -22,8 +22,8 @@ public class UserController {
      * 📝 Registro de nuevo usuario
      */
     @PostMapping("/register")
-    public ResponseEntity<UserDTO> register(@Valid @RequestBody RegisterRequest request) {
-        UserDTO user = userService.register(request);
+    public ResponseEntity<UserProfileResponseDTO> register(@Valid @RequestBody RegisterRequest request) {
+        UserProfileResponseDTO user = userService.register(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(user);
     }
 
@@ -48,11 +48,10 @@ public class UserController {
 
     /**
      * 👤 Obtener perfil del usuario autenticado
-     * El userId viene del header X-User-Id que pone el Gateway
      */
     @GetMapping("/profile")
-    public ResponseEntity<UserDTO> getProfile(@RequestHeader("X-User-Id") UUID userId) {
-        UserDTO user = userService.getUserProfile(userId);
+    public ResponseEntity<UserProfileResponseDTO> getProfile(@RequestHeader("X-User-Id") UUID userId) {
+        UserProfileResponseDTO user = userService.getUserProfile(userId);
         return ResponseEntity.ok(user);
     }
 
@@ -60,10 +59,11 @@ public class UserController {
      * ✏️ Actualizar perfil
      */
     @PutMapping("/profile")
-    public ResponseEntity<UserDTO> updateProfile(
+    public ResponseEntity<UserProfileResponseDTO> updateProfile(
             @RequestHeader("X-User-Id") UUID userId,
-            @RequestBody UserDTO updates) {
-        UserDTO user = userService.updateProfile(userId, updates);
+            @Valid @RequestBody UpdateUserProfileDTO updates) {
+
+        UserProfileResponseDTO user = userService.updateProfile(userId, updates);
         return ResponseEntity.ok(user);
     }
 

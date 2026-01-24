@@ -1,6 +1,6 @@
 package com.myfinances.account.controller;
 
-import com.myfinances.account.dto.CategoryDTO;
+import com.myfinances.account.dto.*;
 import com.myfinances.account.exception.BadRequestException;
 import com.myfinances.account.model.CategoryType;
 import com.myfinances.account.service.CategoryInitializationService;
@@ -29,75 +29,75 @@ public class CategoryController {
      * Crear una nueva categoría
      */
     @PostMapping
-    public ResponseEntity<CategoryDTO> create(
+    public ResponseEntity<CategoryResponseDTO> create(
             @RequestHeader("X-User-Id") UUID userId,
-            @Valid @RequestBody CategoryDTO dto) {
-
+            @Valid @RequestBody CreateCategoryDTO dto) {
         // ⭐ Validar que el tipo sea obligatorio al crear
         if (dto.getType() == null) {
             throw new BadRequestException("El tipo es obligatorio al crear una categoría (INCOME/EXPENSE)");
         }
 
         CategoryType category = service.create(userId, dto);
-        return ResponseEntity.status(HttpStatus.CREATED).body(service.toDTO(userId, category));
+        return ResponseEntity.status(HttpStatus.CREATED).body(service.toResponseDTO(category));
     }
 
     /**
      * Obtener todas las categorías del usuario
      */
     @GetMapping
-    public ResponseEntity<List<CategoryDTO>> getAll(@RequestHeader("X-User-Id") UUID userId) {
-        return ResponseEntity.ok(service.toDTOList(userId, service.findAllByUser(userId)));
+    public ResponseEntity<List<CategoryResponseDTO>> getAll(@RequestHeader("X-User-Id") UUID userId) {
+        return ResponseEntity.ok(service.toResponseDTOList(service.findAllByUser(userId)));
     }
 
     /**
      * Obtener categorías raíz (sin padre)
      */
     @GetMapping("/root")
-    public ResponseEntity<List<CategoryDTO>> getRootCategories(@RequestHeader("X-User-Id") UUID userId) {
-        return ResponseEntity.ok(service.toDTOList(userId, service.findRootCategories(userId)));
+    public ResponseEntity<List<CategoryResponseDTO>> getRootCategories(@RequestHeader("X-User-Id") UUID userId) {
+        return ResponseEntity.ok(service.toResponseDTOList(service.findRootCategories(userId)));
     }
 
     /**
      * Obtener subcategorías de una categoría padre
      */
     @GetMapping("/{parentId}/subcategories")
-    public ResponseEntity<List<CategoryDTO>> getSubcategories(
+    public ResponseEntity<List<CategoryResponseDTO>> getSubcategories(
             @RequestHeader("X-User-Id") UUID userId,
             @PathVariable Long parentId) {
-        return ResponseEntity.ok(service.toDTOList(userId, service.findSubcategories(userId, parentId)));
+        return ResponseEntity.ok(service.toResponseDTOList(service.findSubcategories(userId, parentId)));
     }
 
     /**
      * Obtener una categoría por ID
      */
     @GetMapping("/{id}")
-    public ResponseEntity<CategoryDTO> getById(
+    public ResponseEntity<CategoryResponseDTO> getById(
             @RequestHeader("X-User-Id") UUID userId,
             @PathVariable Long id) {
-        return ResponseEntity.ok(service.toDTO(userId, service.findById(userId, id)));
+        return ResponseEntity.ok(service.toResponseDTO(service.findById(userId, id)));
     }
 
     /**
      * Obtener una categoría por nombre
      */
     @GetMapping("/name/{name}")
-    public ResponseEntity<CategoryDTO> getByName(
+    public ResponseEntity<CategoryResponseDTO> getByName(
             @RequestHeader("X-User-Id") UUID userId,
             @PathVariable String name) {
-        return ResponseEntity.ok(service.toDTO(userId, service.findByName(userId, name)));
+        return ResponseEntity.ok(service.toResponseDTO(service.findByName(userId, name)));
     }
 
     /**
      * Actualizar una categoría
      */
     @PutMapping("/{id}")
-    public ResponseEntity<CategoryDTO> update(
+    public ResponseEntity<CategoryResponseDTO> update(
             @RequestHeader("X-User-Id") UUID userId,
             @PathVariable Long id,
-            @Valid @RequestBody CategoryDTO dto) {
-        CategoryType category = service.update(userId, id, dto);
-        return ResponseEntity.ok(service.toDTO(userId, category));
+            @Valid @RequestBody UpdateCategoryDTO dto) {
+
+        var category = service.update(userId, id, dto);
+        return ResponseEntity.ok(service.toResponseDTO(category));
     }
 
     /**
