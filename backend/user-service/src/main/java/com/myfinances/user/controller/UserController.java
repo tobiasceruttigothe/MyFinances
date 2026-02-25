@@ -4,6 +4,7 @@ import com.myfinances.user.dto.*;
 import com.myfinances.user.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -14,6 +15,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/users")
 @RequiredArgsConstructor
+@Slf4j
 public class UserController {
 
     private final UserService userService;
@@ -23,7 +25,9 @@ public class UserController {
      */
     @PostMapping("/register")
     public ResponseEntity<UserProfileResponseDTO> register(@Valid @RequestBody RegisterRequest request) {
+        log.debug("POST /users/register - email={}, username={}", request.getEmail(), request.getUsername());
         UserProfileResponseDTO user = userService.register(request);
+        log.info("Usuario registrado exitosamente: {}", user.getId());
         return ResponseEntity.status(HttpStatus.CREATED).body(user);
     }
 
@@ -32,7 +36,9 @@ public class UserController {
      */
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
+        log.debug("POST /users/login - email={}", request.getEmail());
         LoginResponse response = userService.login(request);
+        log.info("Login exitoso para usuario: {}", response.getUserId());
         return ResponseEntity.ok(response);
     }
 
@@ -41,8 +47,10 @@ public class UserController {
      */
     @PostMapping("/refresh-token")
     public ResponseEntity<Map<String, Object>> refreshToken(@RequestBody Map<String, String> request) {
+        log.debug("POST /users/refresh-token");
         String refreshToken = request.get("refreshToken");
         Map<String, Object> response = userService.refreshToken(refreshToken);
+        log.debug("Token renovado exitosamente");
         return ResponseEntity.ok(response);
     }
 
@@ -51,6 +59,7 @@ public class UserController {
      */
     @GetMapping("/profile")
     public ResponseEntity<UserProfileResponseDTO> getProfile(@RequestHeader("X-User-Id") UUID userId) {
+        log.debug("GET /users/profile - userId={}", userId);
         UserProfileResponseDTO user = userService.getUserProfile(userId);
         return ResponseEntity.ok(user);
     }
@@ -63,7 +72,9 @@ public class UserController {
             @RequestHeader("X-User-Id") UUID userId,
             @Valid @RequestBody UpdateUserProfileDTO updates) {
 
+        log.debug("PUT /users/profile - userId={}", userId);
         UserProfileResponseDTO user = userService.updateProfile(userId, updates);
+        log.debug("Perfil actualizado para usuario: {}", userId);
         return ResponseEntity.ok(user);
     }
 
@@ -72,7 +83,9 @@ public class UserController {
      */
     @DeleteMapping("/profile")
     public ResponseEntity<Void> deleteUser(@RequestHeader("X-User-Id") UUID userId) {
+        log.debug("DELETE /users/profile - userId={}", userId);
         userService.deleteUser(userId);
+        log.info("Usuario eliminado: {}", userId);
         return ResponseEntity.noContent().build();
     }
 
@@ -81,6 +94,7 @@ public class UserController {
      */
     @GetMapping("/health")
     public ResponseEntity<Map<String, String>> health() {
+        log.debug("GET /users/health");
         return ResponseEntity.ok(Map.of("status", "UP", "service", "user-service"));
     }
 }

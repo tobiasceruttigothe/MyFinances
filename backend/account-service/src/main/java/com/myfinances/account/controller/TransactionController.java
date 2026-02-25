@@ -5,6 +5,7 @@ import com.myfinances.account.model.TransactionType;
 import com.myfinances.account.service.TransactionService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -20,6 +21,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/transactions")
 @RequiredArgsConstructor
+@Slf4j
 public class TransactionController {
 
     private final TransactionService service;
@@ -32,7 +34,9 @@ public class TransactionController {
             @RequestHeader("X-User-Id") UUID userId,
             @Valid @RequestBody CreateTransactionDTO dto) {
 
+        log.debug("POST /transactions - userId={}, tipo={}, monto={}", userId, dto.getType(), dto.getAmount());
         var transaction = service.save(userId, dto);
+        log.debug("Transacción creada exitosamente: ID={}", transaction.getId());
         return ResponseEntity.status(HttpStatus.CREATED).body(service.toResponseDTO(transaction));
     }
 
@@ -41,6 +45,7 @@ public class TransactionController {
      */
     @GetMapping
     public ResponseEntity<List<TransactionResponseDTO>> getAll(@RequestHeader("X-User-Id") UUID userId) {
+        log.debug("GET /transactions - userId={}", userId);
         return ResponseEntity.ok(service.toResponseDTOList(service.findAll(userId)));
     }
 
@@ -51,6 +56,7 @@ public class TransactionController {
     public ResponseEntity<TransactionResponseDTO> getById(
             @RequestHeader("X-User-Id") UUID userId,
             @PathVariable Long id) {
+        log.debug("GET /transactions/{} - userId={}", id, userId);
         return ResponseEntity.ok(service.toResponseDTO(service.findById(userId, id)));
     }
 
@@ -63,7 +69,9 @@ public class TransactionController {
             @PathVariable Long id,
             @Valid @RequestBody UpdateTransactionDTO dto) {
 
+        log.debug("PUT /transactions/{} - userId={}", id, userId);
         var transaction = service.update(userId, id, dto);
+        log.debug("Transacción actualizada: ID={}", id);
         return ResponseEntity.ok(service.toResponseDTO(transaction));
     }
 
@@ -74,7 +82,9 @@ public class TransactionController {
     public ResponseEntity<Void> delete(
             @RequestHeader("X-User-Id") UUID userId,
             @PathVariable Long id) {
+        log.debug("DELETE /transactions/{} - userId={}", id, userId);
         service.delete(userId, id);
+        log.debug("Transacción eliminada: ID={}", id);
         return ResponseEntity.noContent().build();
     }
 

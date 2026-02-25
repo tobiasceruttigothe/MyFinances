@@ -2,8 +2,10 @@ package com.myfinances.account.controller;
 
 import com.myfinances.account.dto.CategorySummaryDTO;
 import com.myfinances.account.dto.MonthlySummaryDTO;
+import com.myfinances.account.exception.BadRequestException;
 import com.myfinances.account.service.ReportService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -13,6 +15,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/reports")
 @RequiredArgsConstructor
+@Slf4j
 public class ReportController {
 
     private final ReportService reportService;
@@ -25,6 +28,17 @@ public class ReportController {
             @RequestHeader("X-User-Id") UUID userId,
             @RequestParam int year,
             @RequestParam int month) {
+
+        log.debug("GET /reports/monthly - userId={}, año={}, mes={}", userId, year, month);
+
+        // ⭐ Validaciones
+        if (month < 1 || month > 12) {
+            throw new BadRequestException("El mes debe estar entre 1 y 12");
+        }
+        if (year < 1900 || year > 2100) {
+            throw new BadRequestException("El año debe estar entre 1900 y 2100");
+        }
+
         return ResponseEntity.ok(reportService.getMonthlySummary(userId, year, month));
     }
 
@@ -36,6 +50,17 @@ public class ReportController {
             @RequestHeader("X-User-Id") UUID userId,
             @RequestParam int year,
             @RequestParam int month) {
+
+        log.debug("GET /reports/expenses/by-category - userId={}, año={}, mes={}", userId, year, month);
+
+        // ⭐ Validaciones
+        if (month < 1 || month > 12) {
+            throw new BadRequestException("El mes debe estar entre 1 y 12");
+        }
+        if (year < 1900 || year > 2100) {
+            throw new BadRequestException("El año debe estar entre 1900 y 2100");
+        }
+
         return ResponseEntity.ok(reportService.getExpensesByCategory(userId, year, month));
     }
 
@@ -47,6 +72,17 @@ public class ReportController {
             @RequestHeader("X-User-Id") UUID userId,
             @RequestParam int year,
             @RequestParam int month) {
+
+        log.debug("GET /reports/incomes/by-category - userId={}, año={}, mes={}", userId, year, month);
+
+        // ⭐ Validaciones
+        if (month < 1 || month > 12) {
+            throw new BadRequestException("El mes debe estar entre 1 y 12");
+        }
+        if (year < 1900 || year > 2100) {
+            throw new BadRequestException("El año debe estar entre 1900 y 2100");
+        }
+
         return ResponseEntity.ok(reportService.getIncomesByCategory(userId, year, month));
     }
 
@@ -56,6 +92,7 @@ public class ReportController {
     @GetMapping("/expenses/all-by-category")
     public ResponseEntity<CategorySummaryDTO.CategorySummaryResponse> getAllExpensesByCategory(
             @RequestHeader("X-User-Id") UUID userId) {
+        log.debug("GET /reports/expenses/all-by-category - userId={}", userId);
         return ResponseEntity.ok(reportService.getAllExpensesByCategory(userId));
     }
 
@@ -65,6 +102,7 @@ public class ReportController {
     @GetMapping("/incomes/all-by-category")
     public ResponseEntity<CategorySummaryDTO.CategorySummaryResponse> getAllIncomesByCategory(
             @RequestHeader("X-User-Id") UUID userId) {
+        log.debug("GET /reports/incomes/all-by-category - userId={}", userId);
         return ResponseEntity.ok(reportService.getAllIncomesByCategory(userId));
     }
 
@@ -75,6 +113,14 @@ public class ReportController {
     public ResponseEntity<List<MonthlySummaryDTO>> getMonthlyComparison(
             @RequestHeader("X-User-Id") UUID userId,
             @RequestParam(defaultValue = "6") int months) {
+
+        log.debug("GET /reports/monthly-comparison - userId={}, meses={}", userId, months);
+
+        // ⭐ Validación
+        if (months < 1 || months > 24) {
+            throw new BadRequestException("El número de meses debe estar entre 1 y 24");
+        }
+
         return ResponseEntity.ok(reportService.getMonthlyComparison(userId, months));
     }
 }

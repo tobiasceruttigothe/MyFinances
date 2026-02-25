@@ -1,0 +1,10 @@
+corremos rebuild, corremos el deploy, ejecutamos portwardfoward:
+
+# Terminal 1 — gateway
+kubectl port-forward svc/gateway-service 8080:8080
+
+# Terminal 2 — keycloak  
+kubectl port-forward svc/keycloak 9090:8080
+
+
+ajustamos la coleccion y probamos la coleccion....

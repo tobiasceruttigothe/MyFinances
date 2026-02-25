@@ -47,6 +47,7 @@ public class CategoryInitializationService implements CommandLineRunner {
         systemCategories.add(createSystemCategory("Salario", TransactionType.INCOME, null, "Ingresos por trabajo en relación de dependencia"));
         systemCategories.add(createSystemCategory("Dividendos", TransactionType.INCOME, null, "Ganancias de inversiones"));
         systemCategories.add(createSystemCategory("Alquileres", TransactionType.INCOME, null, "Ingresos por alquiler de propiedades"));
+        systemCategories.add(createSystemCategory("Inversiones", TransactionType.EXPENSE, null, "Gastos destinados a inversiones financieras"));
 
         // ===================== GASTOS =====================
 

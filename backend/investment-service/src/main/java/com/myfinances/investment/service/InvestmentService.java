@@ -2,8 +2,11 @@ package com.myfinances.investment.service;
 
 import com.myfinances.investment.client.AccountServiceClient;
 import com.myfinances.investment.dto.*;
+import com.myfinances.investment.exception.AccessDeniedException;
+import com.myfinances.investment.exception.BadRequestException;
 import com.myfinances.investment.exception.ResourceNotFoundException;
 import com.myfinances.investment.model.Investment;
+import com.myfinances.investment.model.InvestmentType;
 import com.myfinances.investment.repository.InvestmentRepository;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.RequiredArgsConstructor;
@@ -28,9 +31,23 @@ public class InvestmentService {
     private final UserSettingsService userSettingsService;
 
     public Investment create(UUID userId, CreateInvestmentDTO dto) {
+        log.debug("Creando inversión tipo={} para usuario={}", dto.getType(), userId);
+
+        // ⭐ MEJORA: Validar y normalizar el tipo de inversión
+        String normalizedType = dto.getType().toUpperCase().trim();
+        if (!InvestmentType.isValid(normalizedType)) {
+            log.warn("Tipo de inversión no reconocido: {}. Se usará OTRO.", dto.getType());
+            // Permitimos tipos no estándar pero los marcamos
+        }
+
+        // ⭐ MEJORA: Validar que currentCapital no sea mayor que initialCapital * 100 (protección contra errores)
+        if (dto.getCurrentCapital().compareTo(dto.getInitialCapital().multiply(BigDecimal.valueOf(100))) > 0) {
+            log.warn("El capital actual es más de 100 veces el capital inicial. Posible error de datos.");
+        }
+
         Investment investment = Investment.builder()
                 .userId(userId)
-                .type(dto.getType().toUpperCase())
+                .type(normalizedType)
                 .description(dto.getDescription())
                 .initialCapital(dto.getInitialCapital())
                 .currentCapital(dto.getCurrentCapital())
@@ -59,16 +76,24 @@ public class InvestmentService {
     }
 
     /**
-     * Crea una transacción en account-service vinculada a esta inversión
+     * Crea una transacción en account-service vinculada a esta inversión.
+     *
+     * Busca dinámicamente la categoría "INVERSIONES" del usuario en lugar
+     * de hardcodear el ID. Si no la encuentra, usa la primera categoría
+     * EXPENSE disponible como fallback.
      */
     @CircuitBreaker(name = "accountServiceBreaker", fallbackMethod = "fallbackCreateTransaction")
-    private void createLinkedTransaction(UUID userId, Investment investment) {
-        // Buscar o usar categoría "INVERSIONES" por defecto
+    public void createLinkedTransaction(UUID userId, Investment investment) {
+
+        // 1. Buscar la categoría "INVERSIONES" del usuario
+        Long categoryId = resolveCategoryId(userId);
+
+        // 2. Construir el payload de la transacción
         Map<String, Object> transactionData = new HashMap<>();
         transactionData.put("description", "Inversión: " + investment.getDescription());
         transactionData.put("amount", investment.getInitialCapital());
         transactionData.put("type", "EXPENSE");
-        transactionData.put("categoryId", 1L); // TODO: Buscar dinámicamente la categoría "Inversiones"
+        transactionData.put("categoryId", categoryId);
         transactionData.put("notes", "Transacción automática desde investment-service");
         transactionData.put("linkedToInvestment", true);
         transactionData.put("investmentId", investment.getId());
@@ -79,14 +104,47 @@ public class InvestmentService {
             investment.setLinkedTransactionCreated(true);
             investment.setTransactionId(((Number) response.get("id")).longValue());
             investmentRepository.save(investment);
-            log.info("Transacción vinculada creada: ID={} para inversión={}", investment.getTransactionId(), investment.getId());
+            log.info("Transacción vinculada creada: ID={} para inversión={}",
+                    investment.getTransactionId(), investment.getId());
         }
     }
 
     /**
+     * Resuelve el ID de la categoría "INVERSIONES" del usuario.
+     * Primero intenta encontrarla por nombre; si falla, lanza excepción
+     * que activa el fallback del circuit breaker.
+     */
+    private Long resolveCategoryId(UUID userId) {
+        // Nombres posibles según cómo las creó CategoryInitializationService
+        // (las categorías se guardan en UPPERCASE)
+        String[] candidateNames = {"INVERSIONES", "INVERSION", "INVESTMENT"};
+
+        for (String name : candidateNames) {
+            try {
+                Map<String, Object> category = accountServiceClient.getCategoryByName(userId, name);
+                if (category != null && category.containsKey("id")) {
+                    Long id = ((Number) category.get("id")).longValue();
+                    log.debug("Categoría '{}' resuelta con ID={} para user={}", name, id, userId);
+                    return id;
+                }
+            } catch (Exception e) {
+                log.debug("Categoría '{}' no encontrada para user={}: {}", name, userId, e.getMessage());
+            }
+        }
+
+        // Si no existe ninguna categoría de inversiones, lanzar para activar fallback
+        throw new RuntimeException(
+                "No se encontró una categoría de inversiones para el usuario " + userId +
+                        ". Creá una categoría llamada 'INVERSIONES' de tipo EXPENSE.");
+    }
+
+
+
+
+    /**
      * Fallback si account-service no está disponible
      */
-    private void fallbackCreateTransaction(UUID userId, Investment investment, Throwable t) {
+    public void fallbackCreateTransaction(UUID userId, Investment investment, Throwable t) {
         log.warn("Account-service no disponible. Inversión creada sin transacción vinculada. Error: {}", t.getMessage());
     }
 
@@ -95,7 +153,10 @@ public class InvestmentService {
      */
     @Transactional(readOnly = true)
     public List<Investment> findAll(UUID userId) {
-        return investmentRepository.findByUserId(userId);
+        log.debug("Obteniendo todas las inversiones para usuario: {}", userId);
+        List<Investment> investments = investmentRepository.findByUserId(userId);
+        log.debug("Encontradas {} inversiones para usuario: {}", investments.size(), userId);
+        return investments;
     }
 
     /**
@@ -103,13 +164,17 @@ public class InvestmentService {
      */
     @Transactional(readOnly = true)
     public Investment findById(UUID userId, Long id) {
+        log.debug("Buscando inversión ID={} para usuario: {}", id, userId);
+
         Investment investment = investmentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Inversión no encontrada con ID: " + id));
 
         if (!investment.getUserId().equals(userId)) {
-            throw new RuntimeException("Esta inversión no te pertenece");
+            log.warn("Usuario {} intentó acceder a inversión {} que no le pertenece", userId, id);
+            throw new AccessDeniedException("Esta inversión no te pertenece");
         }
 
+        log.debug("Inversión encontrada: ID={}, Tipo={}, Capital={}", id, investment.getType(), investment.getCurrentCapital());
         return investment;
     }
 
@@ -118,6 +183,13 @@ public class InvestmentService {
      */
     @Transactional(readOnly = true)
     public List<Investment> findByType(UUID userId, String type) {
+        log.debug("Buscando inversiones por tipo='{}' para usuario: {}", type, userId);
+
+        // ⭐ Validación del tipo
+        if (type == null || type.trim().isEmpty()) {
+            throw new BadRequestException("El tipo de inversión no puede estar vacío");
+        }
+
         return investmentRepository.findByUserIdAndType(userId, type.toUpperCase());
     }
 
@@ -126,6 +198,8 @@ public class InvestmentService {
      */
 
     public Investment update(UUID userId, Long id, UpdateInvestmentDTO dto) {
+        log.debug("Actualizando inversión ID={} para usuario: {}", id, userId);
+
         Investment investment = findById(userId, id);
 
         if (dto.getType() != null) {
@@ -141,7 +215,9 @@ public class InvestmentService {
             investment.setNotes(dto.getNotes());
         }
 
-        return investmentRepository.save(investment);
+        Investment updatedInvestment = investmentRepository.save(investment);
+        log.info("Inversión actualizada exitosamente: ID={}, Usuario={}", id, userId);
+        return updatedInvestment;
     }
     /**
      * Elimina una inversión

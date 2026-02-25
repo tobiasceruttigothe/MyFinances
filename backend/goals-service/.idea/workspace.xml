@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="21320851-4f1f-468a-a16b-9257c874e7a8" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/../account-service/src/main/java/com/myfinances/account/exception/AccessDeniedException.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../account-service/src/test/java/com/myfinances/account/controller/CategoryControllerTest.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../account-service/src/test/java/com/myfinances/account/controller/ReportControllerTest.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../account-service/src/test/java/com/myfinances/account/controller/TransactionControllerTest.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../investment-service/src/main/java/com/myfinances/investment/exception/AccessDeniedException.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../investment-service/src/main/java/com/myfinances/investment/exception/BadRequestException.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../investment-service/src/main/java/com/myfinances/investment/model/InvestmentType.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../investment-service/src/test/java/com/myfinances/investment/controller/InvestmentControllerTest.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../user-service/src/main/java/com/myfinances/user/exception/ResourceNotFoundException.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../user-service/src/test/java/com/myfinances/user/controller/UserControllerTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../account-service/src/main/java/com/myfinances/account/controller/AccountController.java" beforeDir="false" afterPath="$PROJECT_DIR$/../account-service/src/main/java/com/myfinances/account/controller/AccountController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../account-service/src/main/java/com/myfinances/account/controller/CategoryController.java" beforeDir="false" afterPath="$PROJECT_DIR$/../account-service/src/main/java/com/myfinances/account/controller/CategoryController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../account-service/src/main/java/com/myfinances/account/controller/ReportController.java" beforeDir="false" afterPath="$PROJECT_DIR$/../account-service/src/main/java/com/myfinances/account/controller/ReportController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../account-service/src/main/java/com/myfinances/account/controller/TransactionController.java" beforeDir="false" afterPath="$PROJECT_DIR$/../account-service/src/main/java/com/myfinances/account/controller/TransactionController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../account-service/src/main/java/com/myfinances/account/exception/GlobalExceptionHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/../account-service/src/main/java/com/myfinances/account/exception/GlobalExceptionHandler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../account-service/src/main/java/com/myfinances/account/service/CategoryService.java" beforeDir="false" afterPath="$PROJECT_DIR$/../account-service/src/main/java/com/myfinances/account/service/CategoryService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../account-service/src/main/java/com/myfinances/account/service/ReportService.java" beforeDir="false" afterPath="$PROJECT_DIR$/../account-service/src/main/java/com/myfinances/account/service/ReportService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../account-service/src/main/java/com/myfinances/account/service/TransactionService.java" beforeDir="false" afterPath="$PROJECT_DIR$/../account-service/src/main/java/com/myfinances/account/service/TransactionService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../investment-service/src/main/java/com/myfinances/investment/controller/InvestmentController.java" beforeDir="false" afterPath="$PROJECT_DIR$/../investment-service/src/main/java/com/myfinances/investment/controller/InvestmentController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../investment-service/src/main/java/com/myfinances/investment/exception/GlobalExceptionHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/../investment-service/src/main/java/com/myfinances/investment/exception/GlobalExceptionHandler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../investment-service/src/main/java/com/myfinances/investment/service/InvestmentService.java" beforeDir="false" afterPath="$PROJECT_DIR$/../investment-service/src/main/java/com/myfinances/investment/service/InvestmentService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../user-service/src/main/java/com/myfinances/user/controller/UserController.java" beforeDir="false" afterPath="$PROJECT_DIR$/../user-service/src/main/java/com/myfinances/user/controller/UserController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../user-service/src/main/java/com/myfinances/user/dto/LoginRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/../user-service/src/main/java/com/myfinances/user/dto/LoginRequest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../user-service/src/main/java/com/myfinances/user/exception/GlobalExceptionHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/../user-service/src/main/java/com/myfinances/user/exception/GlobalExceptionHandler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../user-service/src/main/java/com/myfinances/user/service/UserService.java" beforeDir="false" afterPath="$PROJECT_DIR$/../user-service/src/main/java/com/myfinances/user/service/UserService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../user-service/target/classes/com/myfinances/user/controller/UserController.class" beforeDir="false" afterPath="$PROJECT_DIR$/../user-service/target/classes/com/myfinances/user/controller/UserController.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../user-service/target/classes/com/myfinances/user/dto/LoginRequest$LoginRequestBuilder.class" beforeDir="false" afterPath="$PROJECT_DIR$/../user-service/target/classes/com/myfinances/user/dto/LoginRequest$LoginRequestBuilder.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../user-service/target/classes/com/myfinances/user/dto/LoginRequest.class" beforeDir="false" afterPath="$PROJECT_DIR$/../user-service/target/classes/com/myfinances/user/dto/LoginRequest.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../user-service/target/classes/com/myfinances/user/exception/GlobalExceptionHandler.class" beforeDir="false" afterPath="$PROJECT_DIR$/../user-service/target/classes/com/myfinances/user/exception/GlobalExceptionHandler.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../user-service/target/classes/com/myfinances/user/service/UserService.class" beforeDir="false" afterPath="$PROJECT_DIR$/../user-service/target/classes/com/myfinances/user/service/UserService.class" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="CopilotPersistence">
+    <persistenceIdMap>
+      <entry key="_/home/tobias/Escritorio/Tobias/MyFinances/backend/goals-service" value="3AB9uTkieu55vWjcIsmYTa2K71x" />
+    </persistenceIdMap>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$/../.." />
+  </component>
+  <component name="ProjectColorInfo"><![CDATA[{
+  "associatedIndex": 5
+}]]></component>
+  <component name="ProjectId" id="3AB9uTkieu55vWjcIsmYTa2K71x" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
+    "git-widget-placeholder": "main",
+    "kotlin-language-version-configured": "true",
+    "nodejs_package_manager_path": "npm",
+    "vue.rearranger.settings.migration": "true"
+  }
+}]]></component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-jdk-30f59d01ecdd-2fc7cc6b9a17-intellij.indexing.shared.core-IU-253.31033.145" />
+        <option value="bundled-js-predefined-d6986cc7102b-9b0f141eb926-JavaScript-IU-253.31033.145" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="21320851-4f1f-468a-a16b-9257c874e7a8" name="Changes" comment="" />
+      <created>1772055321789</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1772055321789</updated>
+      <workItem from="1772055323230" duration="10000" />
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="github-copilot-workspace">
+    <instructionFileLocations>
+      <option value=".github/instructions" />
+    </instructionFileLocations>
+    <promptFileLocations>
+      <option value=".github/prompts" />
+    </promptFileLocations>
+  </component>
+</project>

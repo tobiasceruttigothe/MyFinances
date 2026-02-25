@@ -1,42 +1,52 @@
 package com.myfinances.investment.service;
 
+import com.myfinances.investment.client.UserServiceClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
 
 import java.util.Map;
 import java.util.UUID;
 
 /**
- * Servicio para consultar configuraciones del usuario desde user-service
+ * Consulta configuraciones del usuario desde user-service vía Feign.
+ *
+ * Reemplaza la implementación anterior que usaba new RestTemplate() directamente,
+ * lo cual ignoraba el service discovery, el circuit breaker y el manejo de errores.
  */
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class UserSettingsService {
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final UserServiceClient userServiceClient;
 
     /**
      * Verifica si el usuario tiene habilitada la vinculación automática
-     * de inversiones a transacciones
+     * de inversiones a transacciones en account-service.
+     *
+     * Si user-service no está disponible, el fallback retorna false
+     * (comportamiento seguro: no crear transacciones automáticas ante la duda).
      */
     public boolean shouldLinkInvestmentsToTransactions(UUID userId) {
         try {
-            // TODO: Hacer llamada a user-service para obtener settings
-            // Por ahora retornamos false por defecto
-            String url = "http://user-service:8084/api/v1/users/profile";
+            Map<String, Object> profile = userServiceClient.getUserProfile(userId);
 
-            // En producción, esto debería usar Feign con el header X-User-Id
-            // Map<String, Object> profile = userServiceClient.getProfile(userId);
-            // return (Boolean) profile.getOrDefault("linkInvestmentsToTransactions", false);
+            if (profile == null || profile.isEmpty()) {
+                log.debug("Perfil vacío para userId={}, usando default: false", userId);
+                return false;
+            }
 
-            return false; // Default: no vincular automáticamente
+            Object setting = profile.get("linkInvestmentsToTransactions");
+            if (setting instanceof Boolean) {
+                return (Boolean) setting;
+            }
+
+            return false;
 
         } catch (Exception e) {
             log.error("Error consultando settings del usuario {}: {}", userId, e.getMessage());
-            return false; // Default en caso de error
+            return false;
         }
     }
 }

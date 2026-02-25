@@ -7,6 +7,7 @@ import com.myfinances.account.service.CategoryInitializationService;
 import com.myfinances.account.service.CategoryService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -20,6 +21,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/categories")
 @RequiredArgsConstructor
+@Slf4j
 public class CategoryController {
 
     private final CategoryService service;
@@ -32,12 +34,15 @@ public class CategoryController {
     public ResponseEntity<CategoryResponseDTO> create(
             @RequestHeader("X-User-Id") UUID userId,
             @Valid @RequestBody CreateCategoryDTO dto) {
+        log.debug("POST /categories - userId={}, nombre={}, tipo={}", userId, dto.getName(), dto.getType());
+
         // ⭐ Validar que el tipo sea obligatorio al crear
         if (dto.getType() == null) {
             throw new BadRequestException("El tipo es obligatorio al crear una categoría (INCOME/EXPENSE)");
         }
 
         CategoryType category = service.create(userId, dto);
+        log.debug("Categoría creada exitosamente: ID={}", category.getId());
         return ResponseEntity.status(HttpStatus.CREATED).body(service.toResponseDTO(category));
     }
 
@@ -46,6 +51,7 @@ public class CategoryController {
      */
     @GetMapping
     public ResponseEntity<List<CategoryResponseDTO>> getAll(@RequestHeader("X-User-Id") UUID userId) {
+        log.debug("GET /categories - userId={}", userId);
         return ResponseEntity.ok(service.toResponseDTOList(service.findAllByUser(userId)));
     }
 
@@ -54,6 +60,7 @@ public class CategoryController {
      */
     @GetMapping("/root")
     public ResponseEntity<List<CategoryResponseDTO>> getRootCategories(@RequestHeader("X-User-Id") UUID userId) {
+        log.debug("GET /categories/root - userId={}", userId);
         return ResponseEntity.ok(service.toResponseDTOList(service.findRootCategories(userId)));
     }
 
@@ -64,6 +71,7 @@ public class CategoryController {
     public ResponseEntity<List<CategoryResponseDTO>> getSubcategories(
             @RequestHeader("X-User-Id") UUID userId,
             @PathVariable Long parentId) {
+        log.debug("GET /categories/{}/subcategories - userId={}", parentId, userId);
         return ResponseEntity.ok(service.toResponseDTOList(service.findSubcategories(userId, parentId)));
     }
 
@@ -74,6 +82,7 @@ public class CategoryController {
     public ResponseEntity<CategoryResponseDTO> getById(
             @RequestHeader("X-User-Id") UUID userId,
             @PathVariable Long id) {
+        log.debug("GET /categories/{} - userId={}", id, userId);
         return ResponseEntity.ok(service.toResponseDTO(service.findById(userId, id)));
     }
 
@@ -84,6 +93,7 @@ public class CategoryController {
     public ResponseEntity<CategoryResponseDTO> getByName(
             @RequestHeader("X-User-Id") UUID userId,
             @PathVariable String name) {
+        log.debug("GET /categories/name/{} - userId={}", name, userId);
         return ResponseEntity.ok(service.toResponseDTO(service.findByName(userId, name)));
     }
 
@@ -96,7 +106,9 @@ public class CategoryController {
             @PathVariable Long id,
             @Valid @RequestBody UpdateCategoryDTO dto) {
 
+        log.debug("PUT /categories/{} - userId={}", id, userId);
         var category = service.update(userId, id, dto);
+        log.debug("Categoría actualizada: ID={}", id);
         return ResponseEntity.ok(service.toResponseDTO(category));
     }
 
@@ -107,7 +119,9 @@ public class CategoryController {
     public ResponseEntity<Void> delete(
             @RequestHeader("X-User-Id") UUID userId,
             @PathVariable Long id) {
+        log.debug("DELETE /categories/{} - userId={}", id, userId);
         service.delete(userId, id);
+        log.debug("Categoría eliminada: ID={}", id);
         return ResponseEntity.noContent().build();
     }
 
@@ -118,7 +132,9 @@ public class CategoryController {
      */
     @PostMapping("/initialize-for-user/{userId}")
     public ResponseEntity<Void> initializeUserCategories(@PathVariable UUID userId) {
+        log.info("POST /categories/initialize-for-user/{} - Inicializando categorías para nuevo usuario", userId);
         initService.initializeUserCategories(userId);
+        log.info("Categorías inicializadas exitosamente para usuario: {}", userId);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 }

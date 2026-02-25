@@ -8,6 +8,7 @@ import com.myfinances.account.model.TransactionType;
 import com.myfinances.account.repository.CategoryRepository;
 import com.myfinances.account.repository.TransactionRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,14 +17,13 @@ import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.time.Month;
 import java.time.format.TextStyle;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
+@Slf4j
 public class ReportService {
 
     private final TransactionRepository transactionRepository;
@@ -33,6 +33,8 @@ public class ReportService {
      * Genera un resumen mensual completo
      */
     public MonthlySummaryDTO getMonthlySummary(UUID userId, int year, int month) {
+        log.debug("Generando resumen mensual para usuario={}, año={}, mes={}", userId, year, month);
+
         List<Transaction> transactions = transactionRepository.findByUserIdAndYearAndMonth(userId, year, month);
 
         BigDecimal totalIncome = BigDecimal.ZERO;
@@ -90,41 +92,49 @@ public class ReportService {
     }
 
     private List<CategorySummaryDTO> getSummaryByTypeAndMonth(UUID userId, TransactionType type, int year, int month) {
-        List<Transaction> transactions = transactionRepository.findByUserIdAndYearAndMonth(userId, year, month);
-        List<CategoryType> categories = categoryRepository.findByUserId(userId);
+        log.debug("Generando resumen por categoría tipo={} para usuario={}, {}/{}", type, userId, month, year);
 
-        BigDecimal grandTotal = transactions.stream()
-                .filter(t -> t.getType() == type)
+        List<Transaction> transactions = transactionRepository.findByUserIdAndYearAndMonth(userId, year, month);
+
+        // ⭐ MEJORA: Filtrar y agrupar en una sola pasada (más eficiente)
+        Map<Long, List<Transaction>> transactionsByCategory = transactions.stream()
+                .filter(t -> t.getType() == type && t.getCategory() != null)
+                .collect(Collectors.groupingBy(t -> t.getCategory().getId()));
+
+        // Calcular el total general
+        BigDecimal grandTotal = transactionsByCategory.values().stream()
+                .flatMap(List::stream)
                 .map(Transaction::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         List<CategorySummaryDTO> summaries = new ArrayList<>();
 
-        for (CategoryType category : categories) {
-            BigDecimal categoryTotal = transactions.stream()
-                    .filter(t -> t.getType() == type && t.getCategory() != null && t.getCategory().getId().equals(category.getId()))
+        for (Map.Entry<Long, List<Transaction>> entry : transactionsByCategory.entrySet()) {
+            Long categoryId = entry.getKey();
+            List<Transaction> categoryTransactions = entry.getValue();
+
+            BigDecimal categoryTotal = categoryTransactions.stream()
                     .map(Transaction::getAmount)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-            long count = transactions.stream()
-                    .filter(t -> t.getType() == type && t.getCategory() != null && t.getCategory().getId().equals(category.getId()))
-                    .count();
+            long count = categoryTransactions.size();
 
-            if (count > 0) {
-                BigDecimal percentage = BigDecimal.ZERO;
-                if (grandTotal.compareTo(BigDecimal.ZERO) > 0) {
-                    percentage = categoryTotal.divide(grandTotal, 4, RoundingMode.HALF_UP)
-                            .multiply(BigDecimal.valueOf(100));
-                }
+            // Obtener el nombre de la categoría del primer elemento
+            String categoryName = categoryTransactions.get(0).getCategory().getName();
 
-                summaries.add(CategorySummaryDTO.builder()
-                        .categoryId(category.getId())
-                        .categoryName(category.getName())
-                        .totalAmount(categoryTotal)
-                        .transactionCount(count)
-                        .percentage(percentage)
-                        .build());
+            BigDecimal percentage = BigDecimal.ZERO;
+            if (grandTotal.compareTo(BigDecimal.ZERO) > 0) {
+                percentage = categoryTotal.divide(grandTotal, 4, RoundingMode.HALF_UP)
+                        .multiply(BigDecimal.valueOf(100));
             }
+
+            summaries.add(CategorySummaryDTO.builder()
+                    .categoryId(categoryId)
+                    .categoryName(categoryName)
+                    .totalAmount(categoryTotal)
+                    .transactionCount(count)
+                    .percentage(percentage)
+                    .build());
         }
 
         summaries.sort((a, b) -> b.getTotalAmount().compareTo(a.getTotalAmount()));
@@ -146,8 +156,14 @@ public class ReportService {
     }
 
     private CategorySummaryDTO.CategorySummaryResponse getSummaryByType(UUID userId, TransactionType type) {
+        log.debug("Generando resumen histórico por categoría tipo={} para usuario={}", type, userId);
+
         List<Transaction> transactions = transactionRepository.findByUserIdAndType(userId, type);
-        List<CategoryType> categories = categoryRepository.findByUserId(userId);
+
+        // ⭐ MEJORA: Agrupar por categoría en una sola pasada
+        Map<Long, List<Transaction>> transactionsByCategory = transactions.stream()
+                .filter(t -> t.getCategory() != null)
+                .collect(Collectors.groupingBy(t -> t.getCategory().getId()));
 
         BigDecimal grandTotal = transactions.stream()
                 .map(Transaction::getAmount)
@@ -155,34 +171,35 @@ public class ReportService {
 
         List<CategorySummaryDTO> summaries = new ArrayList<>();
 
-        for (CategoryType category : categories) {
-            BigDecimal categoryTotal = transactions.stream()
-                    .filter(t -> t.getCategory() != null && t.getCategory().getId().equals(category.getId()))
+        for (Map.Entry<Long, List<Transaction>> entry : transactionsByCategory.entrySet()) {
+            Long categoryId = entry.getKey();
+            List<Transaction> categoryTransactions = entry.getValue();
+
+            BigDecimal categoryTotal = categoryTransactions.stream()
                     .map(Transaction::getAmount)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-            long count = transactions.stream()
-                    .filter(t -> t.getCategory() != null && t.getCategory().getId().equals(category.getId()))
-                    .count();
+            long count = categoryTransactions.size();
+            String categoryName = categoryTransactions.get(0).getCategory().getName();
 
-            if (count > 0) {
-                BigDecimal percentage = BigDecimal.ZERO;
-                if (grandTotal.compareTo(BigDecimal.ZERO) > 0) {
-                    percentage = categoryTotal.divide(grandTotal, 4, RoundingMode.HALF_UP)
-                            .multiply(BigDecimal.valueOf(100));
-                }
-
-                summaries.add(CategorySummaryDTO.builder()
-                        .categoryId(category.getId())
-                        .categoryName(category.getName())
-                        .totalAmount(categoryTotal)
-                        .transactionCount(count)
-                        .percentage(percentage)
-                        .build());
+            BigDecimal percentage = BigDecimal.ZERO;
+            if (grandTotal.compareTo(BigDecimal.ZERO) > 0) {
+                percentage = categoryTotal.divide(grandTotal, 4, RoundingMode.HALF_UP)
+                        .multiply(BigDecimal.valueOf(100));
             }
+
+            summaries.add(CategorySummaryDTO.builder()
+                    .categoryId(categoryId)
+                    .categoryName(categoryName)
+                    .totalAmount(categoryTotal)
+                    .transactionCount(count)
+                    .percentage(percentage)
+                    .build());
         }
 
         summaries.sort((a, b) -> b.getTotalAmount().compareTo(a.getTotalAmount()));
+
+        log.debug("Resumen generado: {} categorías con total={}", summaries.size(), grandTotal);
 
         return CategorySummaryDTO.CategorySummaryResponse.builder()
                 .categories(summaries)
@@ -194,6 +211,8 @@ public class ReportService {
      * Obtiene comparativa de los últimos N meses
      */
     public List<MonthlySummaryDTO> getMonthlyComparison(UUID userId, int months) {
+        log.debug("Generando comparativa de {} meses para usuario={}", months, userId);
+
         List<MonthlySummaryDTO> comparison = new ArrayList<>();
         LocalDateTime now = LocalDateTime.now();
 
