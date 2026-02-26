@@ -22,6 +22,12 @@ spec:
             - name: CONFIG_SERVER_URL
               value: "http://config-server:8888"
             
+            # Desactivar Eureka
+            - name: EUREKA_CLIENT_ENABLED
+              value: "false"
+            - name: SPRING_CLOUD_DISCOVERY_ENABLED
+              value: "false"
+
             # Base de datos
             - name: SPRING_DATASOURCE_URL
               value: "jdbc:postgresql://postgres-db:5432/investment_db"
@@ -37,6 +43,12 @@ spec:
             # Service URLs
             - name: SERVICES_ACCOUNT_SERVICE_URL
               value: "http://account-service:8081"
+            - name: SERVICES_USER_SERVICE_URL
+              value: "http://user-service:8084"
+
+            # Circuit breaker para Feign fallbacks
+            - name: SPRING_CLOUD_OPENFEIGN_CIRCUITBREAKER_ENABLED
+              value: "true"
 ---
 apiVersion: v1
 kind: Service

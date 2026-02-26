@@ -19,10 +19,10 @@ spec:
           ports:
             - containerPort: 8888
           env:
-            # En K8s, los nombres de servicio DNS son automáticos.
-            # http://discovery-server:8761 funciona igual que en Docker Compose.
-            - name: EUREKA_URL
-              value: "http://discovery-server:8761/eureka/"
+            - name: EUREKA_CLIENT_ENABLED
+              value: "false"
+            - name: SPRING_CLOUD_DISCOVERY_ENABLED
+              value: "false"
 ---
 apiVersion: v1
 kind: Service

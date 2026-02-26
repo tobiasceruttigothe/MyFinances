@@ -7,7 +7,7 @@ import java.math.BigDecimal;
 import java.util.UUID;
 
 
-@FeignClient(name = "investment-service", url = "http://investment-service:8083")
+@FeignClient(name = "investment-service", url = "${services.investment-service.url:http://investment-service:8083}")
 public interface InvestmentClient {
 
     @GetMapping("/api/v1/investments/user/{userId}")

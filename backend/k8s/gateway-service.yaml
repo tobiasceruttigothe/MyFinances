@@ -28,21 +28,65 @@ spec:
               value: "false"
             
             # --- CAMBIO CLAVE 2: Rutas Manuales (Sobrescriben GitHub) ---
-            # Ruta 0: Account Service
+            # Ruta 0: Account Service (accounts + transactions)
             - name: SPRING_CLOUD_GATEWAY_ROUTES_0_ID
               value: "account-service-route"
             - name: SPRING_CLOUD_GATEWAY_ROUTES_0_URI
-              value: "http://account-service:8081" # URL interna de K8s (Nombre del Service)
+              value: "http://account-service:8081"
             - name: SPRING_CLOUD_GATEWAY_ROUTES_0_PREDICATES_0
               value: "Path=/api/v1/accounts/**, /api/v1/transactions/**"
-            
-            # Ruta 1: Investment Service
+            - name: SPRING_CLOUD_GATEWAY_ROUTES_0_FILTERS_0
+              value: "JwtAuthenticationFilter"
+
+            # Ruta 1: Account Service (categories)
             - name: SPRING_CLOUD_GATEWAY_ROUTES_1_ID
-              value: "investment-service-route"
+              value: "categories-route"
             - name: SPRING_CLOUD_GATEWAY_ROUTES_1_URI
-              value: "http://investment-service:8083"
+              value: "http://account-service:8081"
             - name: SPRING_CLOUD_GATEWAY_ROUTES_1_PREDICATES_0
+              value: "Path=/api/v1/categories/**"
+            - name: SPRING_CLOUD_GATEWAY_ROUTES_1_FILTERS_0
+              value: "JwtAuthenticationFilter"
+
+            # Ruta 2: Account Service (reports)
+            - name: SPRING_CLOUD_GATEWAY_ROUTES_2_ID
+              value: "reports-route"
+            - name: SPRING_CLOUD_GATEWAY_ROUTES_2_URI
+              value: "http://account-service:8081"
+            - name: SPRING_CLOUD_GATEWAY_ROUTES_2_PREDICATES_0
+              value: "Path=/api/v1/reports/**"
+            - name: SPRING_CLOUD_GATEWAY_ROUTES_2_FILTERS_0
+              value: "JwtAuthenticationFilter"
+
+            # Ruta 3: Investment Service
+            - name: SPRING_CLOUD_GATEWAY_ROUTES_3_ID
+              value: "investment-service-route"
+            - name: SPRING_CLOUD_GATEWAY_ROUTES_3_URI
+              value: "http://investment-service:8083"
+            - name: SPRING_CLOUD_GATEWAY_ROUTES_3_PREDICATES_0
               value: "Path=/api/v1/investments/**"
+            - name: SPRING_CLOUD_GATEWAY_ROUTES_3_FILTERS_0
+              value: "JwtAuthenticationFilter"
+
+            # Ruta 4: User Service
+            - name: SPRING_CLOUD_GATEWAY_ROUTES_4_ID
+              value: "user-service-route"
+            - name: SPRING_CLOUD_GATEWAY_ROUTES_4_URI
+              value: "http://user-service:8084"
+            - name: SPRING_CLOUD_GATEWAY_ROUTES_4_PREDICATES_0
+              value: "Path=/api/v1/users/**"
+            - name: SPRING_CLOUD_GATEWAY_ROUTES_4_FILTERS_0
+              value: "JwtAuthenticationFilter"
+
+            # Ruta 5: Goals Service
+            - name: SPRING_CLOUD_GATEWAY_ROUTES_5_ID
+              value: "goals-service-route"
+            - name: SPRING_CLOUD_GATEWAY_ROUTES_5_URI
+              value: "http://goals-service:8085"
+            - name: SPRING_CLOUD_GATEWAY_ROUTES_5_PREDICATES_0
+              value: "Path=/api/v1/goals/**"
+            - name: SPRING_CLOUD_GATEWAY_ROUTES_5_FILTERS_0
+              value: "JwtAuthenticationFilter"
 
             # --- SEGURIDAD ---
             - name: SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI

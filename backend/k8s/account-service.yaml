@@ -24,7 +24,9 @@ spec:
             # Desactivamos Eureka aquí también
             - name: EUREKA_CLIENT_ENABLED
               value: "false"
-            
+            - name: SPRING_CLOUD_DISCOVERY_ENABLED
+              value: "false"
+
             # Variables de BD
             - name: SPRING_DATASOURCE_URL
               value: "jdbc:postgresql://postgres-db:5432/account_db"
@@ -33,6 +35,20 @@ spec:
             - name: SPRING_DATASOURCE_PASSWORD
               value: "myfinances_pass"
             
+            # JPA
+            - name: SPRING_JPA_HIBERNATE_DDL_AUTO
+              value: "update"
+            - name: SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT
+              value: "org.hibernate.dialect.PostgreSQLDialect"
+
+            # Service URLs
+            - name: SERVICES_INVESTMENT_SERVICE_URL
+              value: "http://investment-service:8083"
+
+            # Circuit breaker
+            - name: SPRING_CLOUD_OPENFEIGN_CIRCUITBREAKER_ENABLED
+              value: "true"
+
             # Zipkin
             - name: MANAGEMENT_ZIPKIN_TRACING_ENDPOINT
               value: "http://zipkin:9411/api/v2/spans"

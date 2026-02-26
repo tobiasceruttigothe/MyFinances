@@ -1,0 +1,1317 @@
+{
+	"info": {
+		"_postman_id": "myfinances-collection-001",
+		"name": "MyFinances API",
+		"description": "Colección completa para testear la API de MyFinances (gestión de finanzas personales/familiares).\n\nURLs via port-forward de K8s:\n- Gateway: http://localhost:8080\n- Keycloak: http://localhost:8082\n- Zipkin: http://localhost:9411\n\nFlujo sugerido:\n1. Login (auto-setea accessToken y userId)\n2. Usar cualquier endpoint autenticado",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{accessToken}}",
+				"type": "string"
+			}
+		]
+	},
+	"item": [
+		{
+			"name": "🔐 Auth",
+			"description": "Autenticación y gestión de tokens",
+			"item": [
+				{
+					"name": "Register (nuevo usuario)",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"nuevo@test.com\",\n    \"username\": \"nuevo_usuario\",\n    \"password\": \"123456\",\n    \"firstName\": \"Nuevo\",\n    \"lastName\": \"Usuario\"\n}"
+						},
+						"url": {
+							"raw": "{{gatewayUrl}}/api/v1/users/register",
+							"host": ["{{gatewayUrl}}"],
+							"path": ["api", "v1", "users", "register"]
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    var json = pm.response.json();",
+									"    pm.collectionVariables.set('userId', json.id);",
+									"    pm.test('Usuario registrado correctamente', function() {",
+									"        pm.expect(json.id).to.not.be.undefined;",
+									"        pm.expect(json.email).to.eql('nuevo@test.com');",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
+				},
+				{
+					"name": "Login (usuario_prueba)",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"{{testEmail}}\",\n    \"password\": \"{{testPassword}}\"\n}"
+						},
+						"url": {
+							"raw": "{{gatewayUrl}}/api/v1/users/login",
+							"host": ["{{gatewayUrl}}"],
+							"path": ["api", "v1", "users", "login"]
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    var json = pm.response.json();",
+									"    pm.environment.set('accessToken', json.accessToken);",
+									"    pm.environment.set('refreshToken', json.refreshToken);",
+									"    pm.environment.set('userId', json.userId);",
+									"    pm.test('Login exitoso', function() {",
+									"        pm.expect(json.accessToken).to.not.be.empty;",
+									"        pm.expect(json.userId).to.not.be.undefined;",
+									"        pm.expect(json.tokenType).to.eql('Bearer');",
+									"    });",
+									"    console.log('Token guardado. UserId: ' + json.userId);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
+				},
+				{
+					"name": "Login (Keycloak directo)",
+					"description": "Login directo contra Keycloak sin pasar por el gateway. Útil para debug.",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/x-www-form-urlencoded"
+							}
+						],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{ "key": "grant_type", "value": "password" },
+								{ "key": "client_id", "value": "{{clientId}}" },
+								{ "key": "username", "value": "{{testEmail}}" },
+								{ "key": "password", "value": "{{testPassword}}" }
+							]
+						},
+						"url": {
+							"raw": "{{keycloakUrl}}/realms/{{realm}}/protocol/openid-connect/token",
+							"host": ["{{keycloakUrl}}"],
+							"path": ["realms", "{{realm}}", "protocol", "openid-connect", "token"]
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    var json = pm.response.json();",
+									"    pm.environment.set('accessToken', json.access_token);",
+									"    pm.environment.set('refreshToken', json.refresh_token);",
+									"    // Decodificar JWT para extraer sub (userId)",
+									"    var payload = JSON.parse(atob(json.access_token.split('.')[1]));",
+									"    pm.environment.set('userId', payload.sub);",
+									"    pm.test('Login Keycloak directo exitoso', function() {",
+									"        pm.expect(json.access_token).to.not.be.empty;",
+									"    });",
+									"    console.log('Token guardado. Sub (userId): ' + payload.sub);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
+				},
+				{
+					"name": "Refresh Token",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"refreshToken\": \"{{refreshToken}}\"\n}"
+						},
+						"url": {
+							"raw": "{{gatewayUrl}}/api/v1/users/refresh-token",
+							"host": ["{{gatewayUrl}}"],
+							"path": ["api", "v1", "users", "refresh-token"]
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    var json = pm.response.json();",
+									"    pm.environment.set('accessToken', json.access_token);",
+									"    pm.environment.set('refreshToken', json.refresh_token);",
+									"    pm.test('Token renovado', function() {",
+									"        pm.expect(json.access_token).to.not.be.empty;",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "👤 User Profile",
+			"description": "Gestión del perfil de usuario",
+			"item": [
+				{
+					"name": "Get Profile",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{gatewayUrl}}/api/v1/users/profile",
+							"host": ["{{gatewayUrl}}"],
+							"path": ["api", "v1", "users", "profile"]
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Perfil obtenido', function() {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    var json = pm.response.json();",
+									"    pm.expect(json.id).to.not.be.undefined;",
+									"    pm.expect(json.email).to.not.be.empty;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
+				},
+				{
+					"name": "Update Profile",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"firstName\": \"Tobias\",\n    \"lastName\": \"Cerutti\",\n    \"currency\": \"ARS\",\n    \"timezone\": \"America/Argentina/Buenos_Aires\",\n    \"language\": \"es\",\n    \"linkInvestmentsToTransactions\": true,\n    \"enableAutoGoalAssignments\": true\n}"
+						},
+						"url": {
+							"raw": "{{gatewayUrl}}/api/v1/users/profile",
+							"host": ["{{gatewayUrl}}"],
+							"path": ["api", "v1", "users", "profile"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete User",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{gatewayUrl}}/api/v1/users/profile",
+							"host": ["{{gatewayUrl}}"],
+							"path": ["api", "v1", "users", "profile"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "📂 Categories",
+			"description": "CRUD de categorías de transacciones (INCOME/EXPENSE)",
+			"item": [
+				{
+					"name": "Create Category",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Freelance\",\n    \"type\": \"INCOME\",\n    \"description\": \"Ingresos por trabajo freelance\"\n}"
+						},
+						"url": {
+							"raw": "{{gatewayUrl}}/api/v1/categories",
+							"host": ["{{gatewayUrl}}"],
+							"path": ["api", "v1", "categories"]
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    var json = pm.response.json();",
+									"    pm.environment.set('categoryId', json.id);",
+									"    pm.test('Categoría creada', function() {",
+									"        pm.expect(json.id).to.not.be.undefined;",
+									"        pm.expect(json.name).to.eql('Freelance');",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
+				},
+				{
+					"name": "Get All Categories",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{gatewayUrl}}/api/v1/categories",
+							"host": ["{{gatewayUrl}}"],
+							"path": ["api", "v1", "categories"]
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Categorías obtenidas', function() {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    var json = pm.response.json();",
+									"    pm.expect(json).to.be.an('array');",
+									"    // Guardar primera categoryId si existe",
+									"    if (json.length > 0) {",
+									"        pm.environment.set('categoryId', json[0].id);",
+									"    }",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
+				},
+				{
+					"name": "Get Root Categories",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{gatewayUrl}}/api/v1/categories/root",
+							"host": ["{{gatewayUrl}}"],
+							"path": ["api", "v1", "categories", "root"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Category by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{gatewayUrl}}/api/v1/categories/{{categoryId}}",
+							"host": ["{{gatewayUrl}}"],
+							"path": ["api", "v1", "categories", "{{categoryId}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Category by Name",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{gatewayUrl}}/api/v1/categories/name/Alimentación",
+							"host": ["{{gatewayUrl}}"],
+							"path": ["api", "v1", "categories", "name", "Alimentación"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Subcategories",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{gatewayUrl}}/api/v1/categories/{{categoryId}}/subcategories",
+							"host": ["{{gatewayUrl}}"],
+							"path": ["api", "v1", "categories", "{{categoryId}}", "subcategories"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Category",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Freelance IT\",\n    \"description\": \"Ingresos por freelance en tecnología\"\n}"
+						},
+						"url": {
+							"raw": "{{gatewayUrl}}/api/v1/categories/{{categoryId}}",
+							"host": ["{{gatewayUrl}}"],
+							"path": ["api", "v1", "categories", "{{categoryId}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Category",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{gatewayUrl}}/api/v1/categories/{{categoryId}}",
+							"host": ["{{gatewayUrl}}"],
+							"path": ["api", "v1", "categories", "{{categoryId}}"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "💰 Transactions",
+			"description": "CRUD de transacciones (ingresos y gastos)",
+			"item": [
+				{
+					"name": "Create Transaction (EXPENSE)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"description\": \"Compra supermercado\",\n    \"amount\": 15000.50,\n    \"type\": \"EXPENSE\",\n    \"categoryId\": {{categoryId}},\n    \"notes\": \"Compra semanal\"\n}"
+						},
+						"url": {
+							"raw": "{{gatewayUrl}}/api/v1/transactions",
+							"host": ["{{gatewayUrl}}"],
+							"path": ["api", "v1", "transactions"]
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    var json = pm.response.json();",
+									"    pm.environment.set('transactionId', json.id);",
+									"    pm.test('Transacción creada', function() {",
+									"        pm.expect(json.id).to.not.be.undefined;",
+									"        pm.expect(json.type).to.eql('EXPENSE');",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
+				},
+				{
+					"name": "Create Transaction (INCOME)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"description\": \"Salario mensual\",\n    \"amount\": 500000.00,\n    \"type\": \"INCOME\",\n    \"categoryId\": {{categoryId}},\n    \"notes\": \"Sueldo febrero 2026\"\n}"
+						},
+						"url": {
+							"raw": "{{gatewayUrl}}/api/v1/transactions",
+							"host": ["{{gatewayUrl}}"],
+							"path": ["api", "v1", "transactions"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Transactions",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{gatewayUrl}}/api/v1/transactions",
+							"host": ["{{gatewayUrl}}"],
+							"path": ["api", "v1", "transactions"]
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Transacciones obtenidas', function() {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    var json = pm.response.json();",
+									"    pm.expect(json).to.be.an('array');",
+									"    if (json.length > 0) {",
+									"        pm.environment.set('transactionId', json[0].id);",
+									"    }",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
+				},
+				{
+					"name": "Get Transaction by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{gatewayUrl}}/api/v1/transactions/{{transactionId}}",
+							"host": ["{{gatewayUrl}}"],
+							"path": ["api", "v1", "transactions", "{{transactionId}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get by Type (INCOME)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{gatewayUrl}}/api/v1/transactions/type/INCOME",
+							"host": ["{{gatewayUrl}}"],
+							"path": ["api", "v1", "transactions", "type", "INCOME"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get by Type (EXPENSE)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{gatewayUrl}}/api/v1/transactions/type/EXPENSE",
+							"host": ["{{gatewayUrl}}"],
+							"path": ["api", "v1", "transactions", "type", "EXPENSE"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get by Category",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{gatewayUrl}}/api/v1/transactions/category/{{categoryId}}",
+							"host": ["{{gatewayUrl}}"],
+							"path": ["api", "v1", "transactions", "category", "{{categoryId}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get by Date Range",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{gatewayUrl}}/api/v1/transactions/date-range?startDate=2026-01-01T00:00:00&endDate=2026-12-31T23:59:59",
+							"host": ["{{gatewayUrl}}"],
+							"path": ["api", "v1", "transactions", "date-range"],
+							"query": [
+								{ "key": "startDate", "value": "2026-01-01T00:00:00" },
+								{ "key": "endDate", "value": "2026-12-31T23:59:59" }
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get by Month",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{gatewayUrl}}/api/v1/transactions/month?year={{currentYear}}&month={{currentMonth}}",
+							"host": ["{{gatewayUrl}}"],
+							"path": ["api", "v1", "transactions", "month"],
+							"query": [
+								{ "key": "year", "value": "{{currentYear}}" },
+								{ "key": "month", "value": "{{currentMonth}}" }
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Recent (last 10)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{gatewayUrl}}/api/v1/transactions/recent",
+							"host": ["{{gatewayUrl}}"],
+							"path": ["api", "v1", "transactions", "recent"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Search by Description",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{gatewayUrl}}/api/v1/transactions/search?keyword=supermercado",
+							"host": ["{{gatewayUrl}}"],
+							"path": ["api", "v1", "transactions", "search"],
+							"query": [
+								{ "key": "keyword", "value": "supermercado" }
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Balance",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{gatewayUrl}}/api/v1/transactions/balance",
+							"host": ["{{gatewayUrl}}"],
+							"path": ["api", "v1", "transactions", "balance"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Balance by Date Range",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{gatewayUrl}}/api/v1/transactions/balance/date-range?startDate=2026-02-01T00:00:00&endDate=2026-02-28T23:59:59",
+							"host": ["{{gatewayUrl}}"],
+							"path": ["api", "v1", "transactions", "balance", "date-range"],
+							"query": [
+								{ "key": "startDate", "value": "2026-02-01T00:00:00" },
+								{ "key": "endDate", "value": "2026-02-28T23:59:59" }
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Transaction",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"description\": \"Compra supermercado (actualizada)\",\n    \"amount\": 16500.00,\n    \"notes\": \"Incluyendo artículos de limpieza\"\n}"
+						},
+						"url": {
+							"raw": "{{gatewayUrl}}/api/v1/transactions/{{transactionId}}",
+							"host": ["{{gatewayUrl}}"],
+							"path": ["api", "v1", "transactions", "{{transactionId}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Transaction",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{gatewayUrl}}/api/v1/transactions/{{transactionId}}",
+							"host": ["{{gatewayUrl}}"],
+							"path": ["api", "v1", "transactions", "{{transactionId}}"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "📊 Reports",
+			"description": "Reportes y resúmenes financieros",
+			"item": [
+				{
+					"name": "Monthly Summary",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{gatewayUrl}}/api/v1/reports/monthly?year={{currentYear}}&month={{currentMonth}}",
+							"host": ["{{gatewayUrl}}"],
+							"path": ["api", "v1", "reports", "monthly"],
+							"query": [
+								{ "key": "year", "value": "{{currentYear}}" },
+								{ "key": "month", "value": "{{currentMonth}}" }
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Expenses by Category (monthly)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{gatewayUrl}}/api/v1/reports/expenses/by-category?year={{currentYear}}&month={{currentMonth}}",
+							"host": ["{{gatewayUrl}}"],
+							"path": ["api", "v1", "reports", "expenses", "by-category"],
+							"query": [
+								{ "key": "year", "value": "{{currentYear}}" },
+								{ "key": "month", "value": "{{currentMonth}}" }
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Incomes by Category (monthly)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{gatewayUrl}}/api/v1/reports/incomes/by-category?year={{currentYear}}&month={{currentMonth}}",
+							"host": ["{{gatewayUrl}}"],
+							"path": ["api", "v1", "reports", "incomes", "by-category"],
+							"query": [
+								{ "key": "year", "value": "{{currentYear}}" },
+								{ "key": "month", "value": "{{currentMonth}}" }
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "All Expenses by Category (historic)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{gatewayUrl}}/api/v1/reports/expenses/all-by-category",
+							"host": ["{{gatewayUrl}}"],
+							"path": ["api", "v1", "reports", "expenses", "all-by-category"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "All Incomes by Category (historic)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{gatewayUrl}}/api/v1/reports/incomes/all-by-category",
+							"host": ["{{gatewayUrl}}"],
+							"path": ["api", "v1", "reports", "incomes", "all-by-category"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Monthly Comparison (last 6 months)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{gatewayUrl}}/api/v1/reports/monthly-comparison?months=6",
+							"host": ["{{gatewayUrl}}"],
+							"path": ["api", "v1", "reports", "monthly-comparison"],
+							"query": [
+								{ "key": "months", "value": "6" }
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "📈 Investments",
+			"description": "CRUD de inversiones",
+			"item": [
+				{
+					"name": "Create Investment",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"type\": \"ACCION\",\n    \"description\": \"Acciones de GGAL (Galicia)\",\n    \"initialCapital\": 50000.00,\n    \"currentCapital\": 55000.00,\n    \"notes\": \"Compra inicial febrero 2026\",\n    \"createLinkedTransaction\": false\n}"
+						},
+						"url": {
+							"raw": "{{gatewayUrl}}/api/v1/investments",
+							"host": ["{{gatewayUrl}}"],
+							"path": ["api", "v1", "investments"]
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    var json = pm.response.json();",
+									"    pm.environment.set('investmentId', json.id);",
+									"    pm.test('Inversión creada', function() {",
+									"        pm.expect(json.id).to.not.be.undefined;",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
+				},
+				{
+					"name": "Create Investment (Plazo Fijo)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"type\": \"PLAZO_FIJO\",\n    \"description\": \"Plazo fijo Banco Nación 30 días\",\n    \"initialCapital\": 200000.00,\n    \"currentCapital\": 200000.00,\n    \"notes\": \"Tasa 75% TNA\"\n}"
+						},
+						"url": {
+							"raw": "{{gatewayUrl}}/api/v1/investments",
+							"host": ["{{gatewayUrl}}"],
+							"path": ["api", "v1", "investments"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Investments",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{gatewayUrl}}/api/v1/investments",
+							"host": ["{{gatewayUrl}}"],
+							"path": ["api", "v1", "investments"]
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Inversiones obtenidas', function() {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    var json = pm.response.json();",
+									"    pm.expect(json).to.be.an('array');",
+									"    if (json.length > 0) {",
+									"        pm.environment.set('investmentId', json[0].id);",
+									"    }",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
+				},
+				{
+					"name": "Get Investment by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{gatewayUrl}}/api/v1/investments/{{investmentId}}",
+							"host": ["{{gatewayUrl}}"],
+							"path": ["api", "v1", "investments", "{{investmentId}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get by Type (ACCION)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{gatewayUrl}}/api/v1/investments/type/ACCION",
+							"host": ["{{gatewayUrl}}"],
+							"path": ["api", "v1", "investments", "type", "ACCION"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Portfolio Summary",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{gatewayUrl}}/api/v1/investments/portfolio/summary",
+							"host": ["{{gatewayUrl}}"],
+							"path": ["api", "v1", "investments", "portfolio", "summary"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Investment",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"currentCapital\": 58000.00,\n    \"notes\": \"Subió 6% esta semana\"\n}"
+						},
+						"url": {
+							"raw": "{{gatewayUrl}}/api/v1/investments/{{investmentId}}",
+							"host": ["{{gatewayUrl}}"],
+							"path": ["api", "v1", "investments", "{{investmentId}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Investment",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{gatewayUrl}}/api/v1/investments/{{investmentId}}",
+							"host": ["{{gatewayUrl}}"],
+							"path": ["api", "v1", "investments", "{{investmentId}}"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "🎯 Goals",
+			"description": "Metas de ahorro y aportes",
+			"item": [
+				{
+					"name": "Create Goal",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Vacaciones Europa\",\n    \"description\": \"Ahorro para viaje a Europa en verano 2027\",\n    \"targetAmount\": 3000000.00,\n    \"monthlyTargetAmount\": 250000.00,\n    \"autoContribution\": true,\n    \"startDate\": \"2026-02-01\",\n    \"targetDate\": \"2027-01-01\",\n    \"icon\": \"✈️\"\n}"
+						},
+						"url": {
+							"raw": "{{gatewayUrl}}/api/v1/goals",
+							"host": ["{{gatewayUrl}}"],
+							"path": ["api", "v1", "goals"]
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    var json = pm.response.json();",
+									"    pm.environment.set('goalId', json.id);",
+									"    pm.test('Meta creada', function() {",
+									"        pm.expect(json.id).to.not.be.undefined;",
+									"        pm.expect(json.name).to.eql('Vacaciones Europa');",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
+				},
+				{
+					"name": "Create Goal (sin fecha límite)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Fondo de emergencia\",\n    \"description\": \"6 meses de gastos\",\n    \"targetAmount\": 1500000.00,\n    \"monthlyTargetAmount\": 100000.00,\n    \"autoContribution\": false,\n    \"startDate\": \"2026-02-01\",\n    \"icon\": \"🏦\"\n}"
+						},
+						"url": {
+							"raw": "{{gatewayUrl}}/api/v1/goals",
+							"host": ["{{gatewayUrl}}"],
+							"path": ["api", "v1", "goals"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Goals",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{gatewayUrl}}/api/v1/goals",
+							"host": ["{{gatewayUrl}}"],
+							"path": ["api", "v1", "goals"]
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Metas obtenidas', function() {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    var json = pm.response.json();",
+									"    pm.expect(json).to.be.an('array');",
+									"    if (json.length > 0) {",
+									"        pm.environment.set('goalId', json[0].id);",
+									"    }",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
+				},
+				{
+					"name": "Get Goal by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{gatewayUrl}}/api/v1/goals/{{goalId}}",
+							"host": ["{{gatewayUrl}}"],
+							"path": ["api", "v1", "goals", "{{goalId}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Goals by Status (ACTIVE)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{gatewayUrl}}/api/v1/goals/status/ACTIVE",
+							"host": ["{{gatewayUrl}}"],
+							"path": ["api", "v1", "goals", "status", "ACTIVE"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Goal",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Vacaciones Europa 2027\",\n    \"monthlyTargetAmount\": 300000.00,\n    \"description\": \"Actualizado: incluye estadía en Airbnb\"\n}"
+						},
+						"url": {
+							"raw": "{{gatewayUrl}}/api/v1/goals/{{goalId}}",
+							"host": ["{{gatewayUrl}}"],
+							"path": ["api", "v1", "goals", "{{goalId}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Add Contribution",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"amount\": 250000.00,\n    \"notes\": \"Aporte manual de febrero\"\n}"
+						},
+						"url": {
+							"raw": "{{gatewayUrl}}/api/v1/goals/{{goalId}}/contributions",
+							"host": ["{{gatewayUrl}}"],
+							"path": ["api", "v1", "goals", "{{goalId}}", "contributions"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Adjust Contribution",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"amount\": 50000.00,\n    \"year\": 2026,\n    \"month\": 2,\n    \"notes\": \"Usé parte del ahorro para emergencia\",\n    \"isReduction\": true\n}"
+						},
+						"url": {
+							"raw": "{{gatewayUrl}}/api/v1/goals/{{goalId}}/contributions/adjust",
+							"host": ["{{gatewayUrl}}"],
+							"path": ["api", "v1", "goals", "{{goalId}}", "contributions", "adjust"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Contributions",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{gatewayUrl}}/api/v1/goals/{{goalId}}/contributions",
+							"host": ["{{gatewayUrl}}"],
+							"path": ["api", "v1", "goals", "{{goalId}}", "contributions"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Statistics",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{gatewayUrl}}/api/v1/goals/{{goalId}}/statistics",
+							"host": ["{{gatewayUrl}}"],
+							"path": ["api", "v1", "goals", "{{goalId}}", "statistics"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Pause Goal",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"status\": \"PAUSED\"\n}"
+						},
+						"url": {
+							"raw": "{{gatewayUrl}}/api/v1/goals/{{goalId}}",
+							"host": ["{{gatewayUrl}}"],
+							"path": ["api", "v1", "goals", "{{goalId}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Goal",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{gatewayUrl}}/api/v1/goals/{{goalId}}",
+							"host": ["{{gatewayUrl}}"],
+							"path": ["api", "v1", "goals", "{{goalId}}"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "🏦 Account Summary",
+			"description": "Resumen combinado (balance + inversiones)",
+			"item": [
+				{
+					"name": "Get Account Summary",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{gatewayUrl}}/api/v1/accounts/summary",
+							"host": ["{{gatewayUrl}}"],
+							"path": ["api", "v1", "accounts", "summary"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "🏥 Health Checks",
+			"description": "Verificar estado de cada servicio",
+			"item": [
+				{
+					"name": "User Service Health",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{gatewayUrl}}/api/v1/users/health",
+							"host": ["{{gatewayUrl}}"],
+							"path": ["api", "v1", "users", "health"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Investment Service Health",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{gatewayUrl}}/api/v1/investments/health",
+							"host": ["{{gatewayUrl}}"],
+							"path": ["api", "v1", "investments", "health"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Goals Service Health",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{gatewayUrl}}/api/v1/goals/health",
+							"host": ["{{gatewayUrl}}"],
+							"path": ["api", "v1", "goals", "health"]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}
+

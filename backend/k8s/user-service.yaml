@@ -22,6 +22,12 @@ spec:
             - name: CONFIG_SERVER_URL
               value: "http://config-server:8888"
             
+            # Desactivar Eureka
+            - name: EUREKA_CLIENT_ENABLED
+              value: "false"
+            - name: SPRING_CLOUD_DISCOVERY_ENABLED
+              value: "false"
+
             - name: SPRING_DATASOURCE_URL
               value: "jdbc:postgresql://postgres-db:5432/user_db"
             - name: SPRING_DATASOURCE_USERNAME
@@ -29,6 +35,24 @@ spec:
             - name: SPRING_DATASOURCE_PASSWORD
               value: "myfinances_pass"
             
+            # Keycloak
+            - name: KEYCLOAK_AUTH_SERVER_URL
+              value: "http://keycloak:8080"
+            - name: KEYCLOAK_REALM
+              value: "myfinances-realm"
+            - name: KEYCLOAK_RESOURCE
+              value: "myfinances-app"
+            - name: KEYCLOAK_CREDENTIALS_SECRET
+              value: ""
+            - name: KEYCLOAK_ADMIN_USERNAME
+              value: "admin"
+            - name: KEYCLOAK_ADMIN_PASSWORD
+              value: "admin"
+
+            # Account service URL for Feign
+            - name: SERVICES_ACCOUNT_SERVICE_URL
+              value: "http://account-service:8081"
+
             - name: MANAGEMENT_ZIPKIN_TRACING_ENDPOINT
               value: "http://zipkin:9411/api/v2/spans"
 ---

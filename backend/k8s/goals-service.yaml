@@ -21,6 +21,13 @@ spec:
           env:
             - name: CONFIG_SERVER_URL
               value: "http://config-server:8888"
+
+            # Desactivar Eureka
+            - name: EUREKA_CLIENT_ENABLED
+              value: "false"
+            - name: SPRING_CLOUD_DISCOVERY_ENABLED
+              value: "false"
+
             - name: SPRING_DATASOURCE_URL
               value: "jdbc:postgresql://postgres-db:5432/goals_db"
             - name: SPRING_DATASOURCE_USERNAME
