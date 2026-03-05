@@ -107,6 +107,7 @@ wait_for_pod "keycloak-db" 120
 # 2. Keycloak
 log_step "2/6 Desplegando Keycloak..."
 apply_and_log "$K8S_DIR/keycloak-configmap.yaml"
+apply_and_log "$K8S_DIR/keycloak-secrets.yaml"
 apply_and_log "$K8S_DIR/keycloak.yaml"
 wait_for_pod "keycloak" 180
 

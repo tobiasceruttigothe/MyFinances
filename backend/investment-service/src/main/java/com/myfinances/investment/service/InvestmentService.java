@@ -36,8 +36,8 @@ public class InvestmentService {
         // ⭐ MEJORA: Validar y normalizar el tipo de inversión
         String normalizedType = dto.getType().toUpperCase().trim();
         if (!InvestmentType.isValid(normalizedType)) {
-            log.warn("Tipo de inversión no reconocido: {}. Se usará OTRO.", dto.getType());
-            // Permitimos tipos no estándar pero los marcamos
+            throw new BadRequestException("Tipo de inversión no válido: '" + dto.getType() + "'. Tipos válidos: " +
+                    Arrays.stream(InvestmentType.values()).map(Enum::name).collect(Collectors.joining(", ")));
         }
 
         // ⭐ MEJORA: Validar que currentCapital no sea mayor que initialCapital * 100 (protección contra errores)

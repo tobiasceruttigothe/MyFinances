@@ -1,5 +1,7 @@
 package com.myfinances.user.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.myfinances.user.client.AccountServiceClient;
 import com.myfinances.user.dto.*;
 import com.myfinances.user.exception.ResourceNotFoundException;
@@ -13,8 +15,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.ZoneId;
 import java.util.Base64;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -23,10 +27,16 @@ import java.util.UUID;
 @Transactional
 public class UserService {
 
+    private static final String DEFAULT_CURRENCY = "USD";
+    private static final String DEFAULT_TIMEZONE = "America/Argentina/Buenos_Aires";
+    private static final String DEFAULT_LANGUAGE = "es";
+    private static final Set<String> VALID_ZONE_IDS = Set.copyOf(ZoneId.getAvailableZoneIds());
+
     private final UserRepository userRepository;
     private final UserSettingsRepository userSettingsRepository;
     private final KeycloakService keycloakService;
     private final AccountServiceClient accountServiceClient;
+    private final ObjectMapper objectMapper;
 
     public UserProfileResponseDTO register(RegisterRequest request) {
         log.debug("Iniciando registro de usuario: email={}, username={}", request.getEmail(), request.getUsername());
@@ -39,45 +49,23 @@ public class UserService {
             log.warn("Intento de registro con username duplicado: {}", request.getUsername());
             throw new UserAlreadyExistsException("Ya existe un usuario con ese username");
         }
-        try {
-            log.debug("Creando usuario en Keycloak: {}", request.getEmail());
-            UUID keycloakUserId = keycloakService.createUser(request);
-            log.debug("Usuario creado en Keycloak con ID: {}", keycloakUserId);
 
-            User user = User.builder()
-                    .id(keycloakUserId)
-                    .email(request.getEmail())
-                    .username(request.getUsername())
-                    .firstName(request.getFirstName())
-                    .lastName(request.getLastName())
-                    .enabled(true)
-                    .build();
+        log.debug("Creando usuario en Keycloak: {}", request.getEmail());
+        UUID keycloakUserId = keycloakService.createUser(request);
+        log.debug("Usuario creado en Keycloak con ID: {}", keycloakUserId);
 
-            user = userRepository.save(user);
+        User user = User.builder()
+                .id(keycloakUserId)
+                .email(request.getEmail())
+                .username(request.getUsername())
+                .firstName(request.getFirstName())
+                .lastName(request.getLastName())
+                .enabled(true)
+                .build();
 
-            UserSettings settings = UserSettings.builder()
-                    .user(user)
-                    .linkInvestmentsToTransactions(false)
-                    .currency("USD")
-                    .timezone("America/Argentina/Buenos_Aires")
-                    .language("es")
-                    .enableAutoGoalAssignments(true)
-                    .build();
-
-            userSettingsRepository.save(settings);
-            log.info("Settings creados para usuario: {}", user.getId());
-
-            try {
-                accountServiceClient.initializeUserCategories(user.getId());
-            } catch (Exception e) {
-                log.error("Error creando categorías: {}", e.getMessage());
-            }
-
-            return toResponseDTO(user, settings);
-        } catch (Exception e) {
-            log.error("Error en registro de usuario", e);
-            throw e;
-        }
+        user = userRepository.save(user);
+        UserSettings settings = initializeNewUser(user);
+        return toResponseDTO(user, settings);
     }
 
     /**
@@ -86,13 +74,9 @@ public class UserService {
     public LoginResponse login(LoginRequest request) {
         log.debug("Iniciando login para email: {}", request.getEmail());
 
-        // 1. Autenticar con Keycloak
         Map<String, Object> tokenResponse = keycloakService.login(request);
         log.debug("Autenticación exitosa en Keycloak para: {}", request.getEmail());
 
-        // 2. Buscar usuario en nuestra BD por email.
-        //    Si no existe (ej: usuario importado en Keycloak via realm-export),
-        //    lo sincronizamos automáticamente extrayendo datos del JWT.
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseGet(() -> {
                     log.info("Usuario no encontrado en BD local. Sincronizando desde Keycloak...");
@@ -101,7 +85,6 @@ public class UserService {
 
         log.info("Login exitoso para usuario: {}", user.getId());
 
-        // 3. Construir respuesta
         return LoginResponse.builder()
                 .userId(user.getId())
                 .email(user.getEmail())
@@ -121,7 +104,6 @@ public class UserService {
     public Map<String, Object> refreshToken(String refreshToken) {
         log.debug("Renovando token de acceso");
 
-        // ⭐ Validación del refreshToken
         if (refreshToken == null || refreshToken.trim().isEmpty()) {
             throw new IllegalArgumentException("El refresh token no puede estar vacío");
         }
@@ -141,8 +123,7 @@ public class UserService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con ID: " + userId));
 
-        UserSettings settings = userSettingsRepository.findByUserId(userId)
-                .orElse(null);
+        UserSettings settings = userSettingsRepository.findByUserId(userId).orElse(null);
 
         log.debug("Perfil obtenido para usuario: {}", userId);
         return toResponseDTO(user, settings);
@@ -163,7 +144,6 @@ public class UserService {
 
         final User savedUser = userRepository.save(user);
 
-        // Actualizar settings si vienen
         UserSettings settings = userSettingsRepository.findByUserId(userId)
                 .orElseGet(() -> {
                     UserSettings newSettings = new UserSettings();
@@ -175,7 +155,6 @@ public class UserService {
             settings.setLinkInvestmentsToTransactions(updates.getLinkInvestmentsToTransactions());
         }
         if (updates.getCurrency() != null) {
-            // ⭐ MEJORA: Validar que sea un código de moneda válido (ISO 4217)
             String currency = updates.getCurrency().toUpperCase();
             if (!isValidCurrencyCode(currency)) {
                 throw new IllegalArgumentException("Código de moneda inválido: " + currency);
@@ -183,7 +162,6 @@ public class UserService {
             settings.setCurrency(currency);
         }
         if (updates.getTimezone() != null) {
-            // ⭐ MEJORA: Validar que sea un timezone válido
             if (!isValidTimezone(updates.getTimezone())) {
                 throw new IllegalArgumentException("Timezone inválido: " + updates.getTimezone());
             }
@@ -203,22 +181,40 @@ public class UserService {
     }
 
     /**
-     * ⭐ Valida si un código de moneda es válido (ISO 4217)
+     * Social login registration (idempotent).
+     * Called after the frontend completes a Google/social OAuth flow.
+     * If the user already exists in our DB, returns their profile unchanged.
+     * If not, creates the DB record + default settings + categories.
      */
-    private boolean isValidCurrencyCode(String code) {
-        try {
-            java.util.Currency.getInstance(code);
-            return true;
-        } catch (IllegalArgumentException e) {
-            return false;
-        }
-    }
+    public UserProfileResponseDTO socialRegister(UUID userId, SocialRegisterRequest request) {
+        return userRepository.findById(userId)
+                .map(user -> {
+                    UserSettings settings = userSettingsRepository.findByUserId(userId).orElse(null);
+                    log.debug("Social register: usuario ya existe en DB, id={}", userId);
+                    return toResponseDTO(user, settings);
+                })
+                .orElseGet(() -> {
+                    String baseUsername = request.getEmail().split("@")[0].replaceAll("[^a-zA-Z0-9_]", "_");
+                    String username = baseUsername;
+                    int suffix = 1;
+                    while (userRepository.existsByUsername(username)) {
+                        username = baseUsername + suffix++;
+                    }
 
-    /**
-     * ⭐ Valida si un timezone es válido
-     */
-    private boolean isValidTimezone(String timezone) {
-        return java.time.ZoneId.getAvailableZoneIds().contains(timezone);
+                    User user = User.builder()
+                            .id(userId)
+                            .email(request.getEmail())
+                            .username(username)
+                            .firstName(request.getFirstName() != null ? request.getFirstName() : "")
+                            .lastName(request.getLastName() != null ? request.getLastName() : "")
+                            .enabled(true)
+                            .build();
+
+                    user = userRepository.save(user);
+                    UserSettings settings = initializeNewUser(user);
+                    log.info("Social register: nuevo usuario creado id={}, email={}", userId, request.getEmail());
+                    return toResponseDTO(user, settings);
+                });
     }
 
     /**
@@ -230,14 +226,35 @@ public class UserService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con ID: " + userId));
 
-        // Eliminar de Keycloak
         log.debug("Eliminando usuario {} de Keycloak", userId);
         keycloakService.deleteUser(userId);
 
-        // Eliminar de BD (cascade borrará settings)
         userRepository.delete(user);
 
         log.info("Usuario eliminado exitosamente: {}", userId);
+    }
+
+    /**
+     * Crea settings por defecto, guarda en BD e inicializa categorías para un nuevo usuario.
+     * Usado tanto en registro normal como en sincronización desde Keycloak.
+     */
+    private UserSettings initializeNewUser(User user) {
+        UserSettings settings = UserSettings.builder()
+                .user(user)
+                .linkInvestmentsToTransactions(false)
+                .currency(DEFAULT_CURRENCY)
+                .timezone(DEFAULT_TIMEZONE)
+                .language(DEFAULT_LANGUAGE)
+                .enableAutoGoalAssignments(true)
+                .build();
+        userSettingsRepository.save(settings);
+        log.info("Settings creados para usuario: {}", user.getId());
+        try {
+            accountServiceClient.initializeUserCategories(user.getId());
+        } catch (Exception e) {
+            log.warn("No se pudieron inicializar categorías para usuario {}: {}", user.getId(), e.getMessage());
+        }
+        return settings;
     }
 
     /**
@@ -247,15 +264,14 @@ public class UserService {
      */
     private User syncUserFromToken(String accessToken, String email) {
         try {
-            // Decodificar payload del JWT (Base64)
             String[] parts = accessToken.split("\\.");
             String payload = new String(Base64.getUrlDecoder().decode(parts[1]));
 
-            // Parsear JSON manualmente (evitamos dependencia extra)
-            String sub = extractJsonField(payload, "sub");
-            String preferredUsername = extractJsonField(payload, "preferred_username");
-            String givenName = extractJsonField(payload, "given_name");
-            String familyName = extractJsonField(payload, "family_name");
+            JsonNode claims = objectMapper.readTree(payload);
+            String sub = claims.path("sub").asText(null);
+            String preferredUsername = claims.path("preferred_username").asText(null);
+            String givenName = claims.path("given_name").asText(null);
+            String familyName = claims.path("family_name").asText(null);
 
             if (sub == null) {
                 throw new RuntimeException("No se pudo extraer el 'sub' (userId) del token JWT");
@@ -275,24 +291,7 @@ public class UserService {
             user = userRepository.save(user);
             log.info("Usuario sincronizado desde Keycloak: id={}, email={}", keycloakId, email);
 
-            // Crear settings por defecto
-            UserSettings settings = UserSettings.builder()
-                    .user(user)
-                    .linkInvestmentsToTransactions(false)
-                    .currency("USD")
-                    .timezone("America/Argentina/Buenos_Aires")
-                    .language("es")
-                    .enableAutoGoalAssignments(true)
-                    .build();
-            userSettingsRepository.save(settings);
-
-            // Intentar inicializar categorías
-            try {
-                accountServiceClient.initializeUserCategories(user.getId());
-            } catch (Exception e) {
-                log.warn("No se pudieron inicializar categorías para usuario sincronizado: {}", e.getMessage());
-            }
-
+            initializeNewUser(user);
             return user;
         } catch (Exception e) {
             log.error("Error sincronizando usuario desde Keycloak token", e);
@@ -300,17 +299,17 @@ public class UserService {
         }
     }
 
-    /**
-     * Extrae un campo string de un JSON simple (sin dependencias externas)
-     */
-    private String extractJsonField(String json, String field) {
-        String search = "\"" + field + "\":\"";
-        int start = json.indexOf(search);
-        if (start == -1) return null;
-        start += search.length();
-        int end = json.indexOf("\"", start);
-        if (end == -1) return null;
-        return json.substring(start, end);
+    private boolean isValidCurrencyCode(String code) {
+        try {
+            java.util.Currency.getInstance(code);
+            return true;
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
+    }
+
+    private boolean isValidTimezone(String timezone) {
+        return VALID_ZONE_IDS.contains(timezone);
     }
 
     private UserProfileResponseDTO toResponseDTO(User user, UserSettings settings) {

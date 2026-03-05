@@ -9,35 +9,72 @@ data:
       "enabled": true,
       "accessTokenLifespan": 300,
       "ssoSessionIdleTimeout": 1800,
-      "sslRequired": "none",
-      "registrationAllowed": true,
+      "ssoSessionMaxLifespan": 36000,
+      "offlineSessionIdleTimeout": 2592000,
+      "sslRequired": "external",
+      "registrationAllowed": false,
       "loginWithEmailAllowed": true,
       "duplicateEmailsAllowed": false,
       "resetPasswordAllowed": true,
-      "editUsernameAllowed": true,
+      "editUsernameAllowed": false,
+      "rememberMe": true,
+      "verifyEmail": false,
+      "passwordPolicy": "length(8) and upperCase(1) and lowerCase(1) and digits(1)",
+      "bruteForceProtected": true,
+      "permanentLockout": false,
+      "maxFailureWaitSeconds": 900,
+      "minimumQuickLoginWaitSeconds": 60,
+      "waitIncrementSeconds": 60,
+      "quickLoginCheckMilliSeconds": 1000,
+      "maxDeltaTimeSeconds": 43200,
+      "failureFactor": 5,
+      "smtpServer": {
+        "host": "${env.SMTP_HOST}",
+        "port": "${env.SMTP_PORT}",
+        "from": "${env.SMTP_FROM}",
+        "fromDisplayName": "MyFinances",
+        "ssl": "false",
+        "starttls": "true",
+        "auth": "true",
+        "user": "${env.SMTP_USER}",
+        "password": "${env.SMTP_PASSWORD}"
+      },
+      "identityProviders": [
+        {
+          "alias": "google",
+          "displayName": "Google",
+          "providerId": "google",
+          "enabled": true,
+          "trustEmail": true,
+          "storeToken": false,
+          "addReadTokenRoleOnCreate": false,
+          "firstBrokerLoginFlowAlias": "first broker login",
+          "config": {
+            "clientId": "${env.GOOGLE_CLIENT_ID}",
+            "clientSecret": "${env.GOOGLE_CLIENT_SECRET}",
+            "syncMode": "IMPORT",
+            "useJwksUrl": "true",
+            "defaultScope": "openid email profile"
+          }
+        }
+      ],
       "roles": {
         "realm": [
-          {
-            "name": "USER",
-            "description": "Usuario estándar"
-          },
-          {
-            "name": "ADMIN",
-            "description": "Administrador del sistema"
-          }
+          { "name": "USER", "description": "Standard user" },
+          { "name": "ADMIN", "description": "System administrator" }
         ]
       },
       "clients": [
         {
           "clientId": "myfinances-app",
-          "rootUrl": "http://localhost:8080",
-          "adminUrl": "http://localhost:8080",
+          "rootUrl": "http://localhost:5173",
+          "adminUrl": "http://localhost:5173",
           "surrogateAuthRequired": false,
           "enabled": true,
           "alwaysDisplayInConsole": false,
           "clientAuthenticatorType": "client-secret",
-          "redirectUris": ["*"],
-          "webOrigins": ["*"],
+          "redirectUris": ["http://localhost:5173/*", "http://localhost:3000/*"],
+          "webOrigins": ["http://localhost:5173", "http://localhost:3000"],
           "notBefore": 0,
           "bearerOnly": false,
           "consentRequired": false,
@@ -49,23 +86,13 @@ data:
           "frontchannelLogout": false,
           "protocol": "openid-connect",
           "attributes": {
-            "access.token.lifespan": "300"
+            "access.token.lifespan": "300",
+            "pkce.code.challenge.method": "S256"
           },
           "fullScopeAllowed": true,
           "nodeReRegistrationTimeout": -1,
-          "defaultClientScopes": [
-            "web-origins",
-            "role_list",
-            "roles",
-            "profile",
-            "email"
-          ],
-          "optionalClientScopes": [
-            "address",
-            "phone",
-            "offline_access",
-            "microprofile-jwt"
-          ]
+          "defaultClientScopes": ["web-origins", "role_list", "roles", "profile", "email"],
+          "optionalClientScopes": ["address", "phone", "offline_access", "microprofile-jwt"]
         }
       ],
       "users": [
@@ -76,24 +103,12 @@ data:
           "emailVerified": true,
           "firstName": "Usuario",
           "lastName": "Prueba",
-          "credentials": [
-            {
-              "type": "password",
-              "value": "1234",
-              "temporary": false
-            }
-          ],
+          "credentials": [{ "type": "password", "value": "Test@1234", "temporary": false }],
           "realmRoles": ["USER"],
           "clientRoles": {}
         }
       ],
-      "defaultDefaultClientScopes": [
-        "role_list",
-        "profile",
-        "email",
-        "roles",
-        "web-origins"
-      ],
+      "defaultDefaultClientScopes": ["role_list", "profile", "email", "roles", "web-origins"],
       "clientScopes": [
         {
           "name": "roles",

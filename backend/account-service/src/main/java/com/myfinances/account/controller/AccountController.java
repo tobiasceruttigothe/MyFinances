@@ -1,6 +1,7 @@
 package com.myfinances.account.controller;
 
 import com.myfinances.account.client.InvestmentClient;
+import com.myfinances.account.service.TransactionService;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,6 +23,7 @@ import java.util.UUID;
 public class AccountController {
 
     private final InvestmentClient investmentClient;
+    private final TransactionService transactionService;
 
     /**
      * Obtener resumen completo del usuario (balance + inversiones)
@@ -36,9 +38,8 @@ public class AccountController {
         BigDecimal totalInvestments = investmentClient.getTotalInvestmentByUserId(userId);
         log.debug("Total inversiones obtenido: {}", totalInvestments);
 
-        // 2. Aquí llamarías a TransactionService para obtener el balance real
-        // Por ahora mock:
-        BigDecimal accountBalance = new BigDecimal("5000.00");
+        // 2. Obtener el balance real desde TransactionService
+        BigDecimal accountBalance = transactionService.calculateBalance(userId).getBalance();
 
         Map<String, Object> response = new HashMap<>();
         response.put("userId", userId.toString());
@@ -50,6 +51,11 @@ public class AccountController {
         return ResponseEntity.ok(response);
     }
 
+    @GetMapping("/health")
+    public ResponseEntity<Map<String, String>> health() {
+        return ResponseEntity.ok(Map.of("status", "UP"));
+    }
+
     /**
      * Método de respaldo si investment-service falla
      */
@@ -58,9 +64,9 @@ public class AccountController {
 
         Map<String, Object> response = new HashMap<>();
         response.put("userId", userId.toString());
-        response.put("accountBalance", new BigDecimal("5000.00"));
+        response.put("accountBalance", BigDecimal.ZERO);
         response.put("investments", BigDecimal.ZERO);
-        response.put("netWorth", new BigDecimal("5000.00"));
+        response.put("netWorth", BigDecimal.ZERO);
         response.put("message", "Investment service is currently unavailable.");
 
         return ResponseEntity.ok(response);

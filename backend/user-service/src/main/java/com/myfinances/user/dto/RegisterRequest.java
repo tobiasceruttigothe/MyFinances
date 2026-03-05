@@ -23,7 +23,7 @@ public class RegisterRequest {
     private String username;
 
     @NotBlank(message = "La contraseña es obligatoria")
-    @Size(min = 6, message = "La contraseña debe tener al menos 6 caracteres")
+    @Size(min = 8, message = "La contraseña debe tener al menos 8 caracteres")
     private String password;
 
     @NotBlank(message = "El nombre es obligatorio")

@@ -90,7 +90,23 @@ public class UserController {
     }
 
     /**
-     * 🏥 Health check (público)
+     * Social login registration (idempotent).
+     * Called by the frontend after a Google/social OAuth PKCE flow completes.
+     * Requires a valid JWT — the gateway propagates X-User-Id from the token sub claim.
+     */
+    @PostMapping("/social-register")
+    public ResponseEntity<UserProfileResponseDTO> socialRegister(
+            @RequestHeader("X-User-Id") UUID userId,
+            @Valid @RequestBody SocialRegisterRequest request) {
+
+        log.debug("POST /users/social-register - userId={}, email={}", userId, request.getEmail());
+        UserProfileResponseDTO user = userService.socialRegister(userId, request);
+        log.info("Social register completado para usuario: {}", userId);
+        return ResponseEntity.status(HttpStatus.OK).body(user);
+    }
+
+    /**
+     * Health check (public)
      */
     @GetMapping("/health")
     public ResponseEntity<Map<String, String>> health() {

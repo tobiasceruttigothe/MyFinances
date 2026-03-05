@@ -31,6 +31,41 @@ spec:
               value: "admin"
             - name: KEYCLOAK_ADMIN_PASSWORD
               value: "admin"
+            - name: GOOGLE_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-external-secrets
+                  key: GOOGLE_CLIENT_ID
+            - name: GOOGLE_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-external-secrets
+                  key: GOOGLE_CLIENT_SECRET
+            - name: SMTP_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-external-secrets
+                  key: SMTP_HOST
+            - name: SMTP_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-external-secrets
+                  key: SMTP_PORT
+            - name: SMTP_FROM
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-external-secrets
+                  key: SMTP_FROM
+            - name: SMTP_USER
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-external-secrets
+                  key: SMTP_USER
+            - name: SMTP_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-external-secrets
+                  key: SMTP_PASSWORD
           volumeMounts:
             - name: realm-config-vol
               mountPath: /opt/keycloak/data/import/realm-export.json

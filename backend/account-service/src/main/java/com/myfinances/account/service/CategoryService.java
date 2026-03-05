@@ -25,6 +25,7 @@ public class CategoryService {
 
     private final CategoryRepository categoryRepository;
     private final TransactionRepository transactionRepository;
+    private final CategoryInitializationService categoryInitializationService;
 
     /**
      * ⭐ Crea una nueva categoría para un usuario
@@ -72,12 +73,18 @@ public class CategoryService {
     }
 
     /**
-     * Obtiene todas las categorías de un usuario
+     * Obtiene todas las categorías de un usuario.
+     * Si el usuario no tiene categorías (por ejemplo, si la inicialización al registrarse falló),
+     * las crea automáticamente clonando las del sistema (self-healing).
      */
-    @Transactional(readOnly = true)
     public List<CategoryType> findAllByUser(UUID userId) {
         log.debug("Obteniendo todas las categorías para usuario: {}", userId);
         List<CategoryType> categories = categoryRepository.findByUserId(userId);
+        if (categories.isEmpty()) {
+            log.info("Usuario {} no tiene categorías, inicializando automáticamente", userId);
+            categoryInitializationService.initializeUserCategories(userId);
+            categories = categoryRepository.findByUserId(userId);
+        }
         log.debug("Encontradas {} categorías para usuario: {}", categories.size(), userId);
         return categories;
     }

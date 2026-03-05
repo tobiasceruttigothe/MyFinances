@@ -1,0 +1,31 @@
+2. Google OAuth (PKCE)
+
+  - Keycloak: IDP de Google configurado con ${env.GOOGLE_CLIENT_ID} / ${env.GOOGLE_CLIENT_SECRET}
+  - K8s: keycloak-secrets.yaml — Secret con los placeholders a reemplazar
+  - deploy-k8s.sh: aplica el Secret antes de levantar Keycloak
+  - Frontend: botón "Continuar con Google" en LoginPage → PKCE redirect → /auth/callback → intercambia código → llama POST
+  /api/v1/users/social-register
+  - PKCE helpers: frontend/src/lib/pkce.ts
+
+  3. SMTP
+
+  - Config smtpServer en realm JSON usando ${env.SMTP_*} (env vars del Secret)
+  - Apunta a Gmail SMTP por defecto
+  - verifyEmail: false por ahora (actívalo desde la consola de Keycloak → Realm Settings → Email cuando tengas SMTP funcionando)
+
+  4. user-service
+
+  - Nuevo endpoint POST /api/v1/users/social-register (idempotente, requiere JWT)
+  - Si el usuario ya existe en DB → devuelve su perfil; si no → crea DB record + settings + categorías
+
+  ---
+  Para activar Google OAuth:
+
+  1. Ir a https://console.cloud.google.com → crear proyecto → Credentials → OAuth 2.0 Client ID
+  2. Agregar authorized redirect URI: http://localhost:8082/realms/myfinances-realm/broker/google/endpoint
+  3. Editar backend/k8s/keycloak-secrets.yaml con el Client ID y Secret reales
+  4. Hacer fresh deploy de Keycloak (necesita reimportar el realm con los nuevos valores):
+  kubectl delete pod -l app=keycloak
+  kubectl delete pvc keycloak-db-pvc   # si existe, para limpiar la DB de Keycloak
+  cd backend && ./deploy-k8s.sh
+

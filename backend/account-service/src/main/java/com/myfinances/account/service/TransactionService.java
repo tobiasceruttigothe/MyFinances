@@ -287,6 +287,8 @@ public class TransactionService {
     public BalanceDTO calculateBalanceByDateRange(UUID userId, LocalDateTime startDate, LocalDateTime endDate) {
         BigDecimal totalIncome = transactionRepository.sumByUserIdAndTypeAndDateBetween(userId, TransactionType.INCOME, startDate, endDate);
         BigDecimal totalExpense = transactionRepository.sumByUserIdAndTypeAndDateBetween(userId, TransactionType.EXPENSE, startDate, endDate);
+        totalIncome = totalIncome != null ? totalIncome : BigDecimal.ZERO;
+        totalExpense = totalExpense != null ? totalExpense : BigDecimal.ZERO;
         BigDecimal balance = totalIncome.subtract(totalExpense);
 
         return BalanceDTO.builder()

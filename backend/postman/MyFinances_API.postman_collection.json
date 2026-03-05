@@ -2,7 +2,7 @@
 	"info": {
 		"_postman_id": "myfinances-collection-001",
 		"name": "MyFinances API",
-		"description": "Colección completa para testear la API de MyFinances (gestión de finanzas personales/familiares).\n\nURLs via port-forward de K8s:\n- Gateway: http://localhost:8080\n- Keycloak: http://localhost:8082\n- Zipkin: http://localhost:9411\n\nFlujo sugerido:\n1. Login (auto-setea accessToken y userId)\n2. Usar cualquier endpoint autenticado",
+		"description": "Colección completa para testear la API de MyFinances.\n\nURLs via port-forward de K8s:\n- Gateway: http://localhost:8080\n- Keycloak: http://localhost:8082\n- Zipkin: http://localhost:9411\n\nFlujo: Register → Login → Categories → Transactions → Reports → Investments → Goals → Summary → Health → Cleanup",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"auth": {
@@ -21,7 +21,7 @@
 			"description": "Autenticación y gestión de tokens",
 			"item": [
 				{
-					"name": "Register (nuevo usuario)",
+					"name": "Register",
 					"request": {
 						"auth": {
 							"type": "noauth"
@@ -35,12 +35,19 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"email\": \"nuevo@test.com\",\n    \"username\": \"nuevo_usuario\",\n    \"password\": \"123456\",\n    \"firstName\": \"Nuevo\",\n    \"lastName\": \"Usuario\"\n}"
+							"raw": "{\n    \"email\": \"{{testEmail}}\",\n    \"username\": \"test_user_newman\",\n    \"password\": \"{{testPassword}}\",\n    \"firstName\": \"Test\",\n    \"lastName\": \"Newman\"\n}"
 						},
 						"url": {
 							"raw": "{{gatewayUrl}}/api/v1/users/register",
-							"host": ["{{gatewayUrl}}"],
-							"path": ["api", "v1", "users", "register"]
+							"host": [
+								"{{gatewayUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"register"
+							]
 						}
 					},
 					"response": [],
@@ -49,12 +56,14 @@
 							"listen": "test",
 							"script": {
 								"exec": [
+									"pm.test('Register: 201 creado o 409 ya existe', function() {",
+									"    pm.expect([201, 409]).to.include(pm.response.code);",
+									"});",
 									"if (pm.response.code === 201) {",
 									"    var json = pm.response.json();",
-									"    pm.collectionVariables.set('userId', json.id);",
 									"    pm.test('Usuario registrado correctamente', function() {",
 									"        pm.expect(json.id).to.not.be.undefined;",
-									"        pm.expect(json.email).to.eql('nuevo@test.com');",
+									"        pm.expect(json.email).to.eql(pm.environment.get('testEmail'));",
 									"    });",
 									"}"
 								],
@@ -64,7 +73,7 @@
 					]
 				},
 				{
-					"name": "Login (usuario_prueba)",
+					"name": "Login",
 					"request": {
 						"auth": {
 							"type": "noauth"
@@ -82,8 +91,15 @@
 						},
 						"url": {
 							"raw": "{{gatewayUrl}}/api/v1/users/login",
-							"host": ["{{gatewayUrl}}"],
-							"path": ["api", "v1", "users", "login"]
+							"host": [
+								"{{gatewayUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"login"
+							]
 						}
 					},
 					"response": [],
@@ -92,18 +108,17 @@
 							"listen": "test",
 							"script": {
 								"exec": [
-									"if (pm.response.code === 200) {",
+									"pm.test('Login exitoso', function() {",
+									"    pm.expect(pm.response.code).to.eql(200);",
 									"    var json = pm.response.json();",
+									"    pm.expect(json.accessToken).to.not.be.empty;",
+									"    pm.expect(json.userId).to.not.be.undefined;",
+									"    pm.expect(json.tokenType).to.eql('Bearer');",
 									"    pm.environment.set('accessToken', json.accessToken);",
 									"    pm.environment.set('refreshToken', json.refreshToken);",
 									"    pm.environment.set('userId', json.userId);",
-									"    pm.test('Login exitoso', function() {",
-									"        pm.expect(json.accessToken).to.not.be.empty;",
-									"        pm.expect(json.userId).to.not.be.undefined;",
-									"        pm.expect(json.tokenType).to.eql('Bearer');",
-									"    });",
 									"    console.log('Token guardado. UserId: ' + json.userId);",
-									"}"
+									"});"
 								],
 								"type": "text/javascript"
 							}
@@ -111,8 +126,8 @@
 					]
 				},
 				{
-					"name": "Login (Keycloak directo)",
-					"description": "Login directo contra Keycloak sin pasar por el gateway. Útil para debug.",
+					"name": "Login (Keycloak directo) [requiere port-forward :8082]",
+					"description": "Login directo contra Keycloak sin pasar por el gateway. Requiere: kubectl port-forward service/keycloak 8082:8080",
 					"request": {
 						"auth": {
 							"type": "noauth"
@@ -127,16 +142,36 @@
 						"body": {
 							"mode": "urlencoded",
 							"urlencoded": [
-								{ "key": "grant_type", "value": "password" },
-								{ "key": "client_id", "value": "{{clientId}}" },
-								{ "key": "username", "value": "{{testEmail}}" },
-								{ "key": "password", "value": "{{testPassword}}" }
+								{
+									"key": "grant_type",
+									"value": "password"
+								},
+								{
+									"key": "client_id",
+									"value": "{{clientId}}"
+								},
+								{
+									"key": "username",
+									"value": "{{testEmail}}"
+								},
+								{
+									"key": "password",
+									"value": "{{testPassword}}"
+								}
 							]
 						},
 						"url": {
 							"raw": "{{keycloakUrl}}/realms/{{realm}}/protocol/openid-connect/token",
-							"host": ["{{keycloakUrl}}"],
-							"path": ["realms", "{{realm}}", "protocol", "openid-connect", "token"]
+							"host": [
+								"{{keycloakUrl}}"
+							],
+							"path": [
+								"realms",
+								"{{realm}}",
+								"protocol",
+								"openid-connect",
+								"token"
+							]
 						}
 					},
 					"response": [],
@@ -145,17 +180,17 @@
 							"listen": "test",
 							"script": {
 								"exec": [
+									"// Este request requiere port-forward de Keycloak en :8082",
+									"// kubectl port-forward service/keycloak 8082:8080",
 									"if (pm.response.code === 200) {",
 									"    var json = pm.response.json();",
-									"    pm.environment.set('accessToken', json.access_token);",
-									"    pm.environment.set('refreshToken', json.refresh_token);",
-									"    // Decodificar JWT para extraer sub (userId)",
-									"    var payload = JSON.parse(atob(json.access_token.split('.')[1]));",
-									"    pm.environment.set('userId', payload.sub);",
 									"    pm.test('Login Keycloak directo exitoso', function() {",
 									"        pm.expect(json.access_token).to.not.be.empty;",
 									"    });",
-									"    console.log('Token guardado. Sub (userId): ' + payload.sub);",
+									"    var payload = JSON.parse(atob(json.access_token.split('.')[1]));",
+									"    console.log('Sub (userId): ' + payload.sub);",
+									"} else {",
+									"    console.log('Keycloak directo no disponible (necesita port-forward :8082) - OK, continuando');",
 									"}"
 								],
 								"type": "text/javascript"
@@ -182,8 +217,15 @@
 						},
 						"url": {
 							"raw": "{{gatewayUrl}}/api/v1/users/refresh-token",
-							"host": ["{{gatewayUrl}}"],
-							"path": ["api", "v1", "users", "refresh-token"]
+							"host": [
+								"{{gatewayUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"refresh-token"
+							]
 						}
 					},
 					"response": [],
@@ -192,14 +234,13 @@
 							"listen": "test",
 							"script": {
 								"exec": [
-									"if (pm.response.code === 200) {",
+									"pm.test('Token renovado', function() {",
+									"    pm.expect(pm.response.code).to.eql(200);",
 									"    var json = pm.response.json();",
+									"    pm.expect(json.access_token).to.not.be.empty;",
 									"    pm.environment.set('accessToken', json.access_token);",
 									"    pm.environment.set('refreshToken', json.refresh_token);",
-									"    pm.test('Token renovado', function() {",
-									"        pm.expect(json.access_token).to.not.be.empty;",
-									"    });",
-									"}"
+									"});"
 								],
 								"type": "text/javascript"
 							}
@@ -219,8 +260,15 @@
 						"header": [],
 						"url": {
 							"raw": "{{gatewayUrl}}/api/v1/users/profile",
-							"host": ["{{gatewayUrl}}"],
-							"path": ["api", "v1", "users", "profile"]
+							"host": [
+								"{{gatewayUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"profile"
+							]
 						}
 					},
 					"response": [],
@@ -257,33 +305,87 @@
 						},
 						"url": {
 							"raw": "{{gatewayUrl}}/api/v1/users/profile",
-							"host": ["{{gatewayUrl}}"],
-							"path": ["api", "v1", "users", "profile"]
+							"host": [
+								"{{gatewayUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"profile"
+							]
 						}
 					},
-					"response": []
-				},
-				{
-					"name": "Delete User",
-					"request": {
-						"method": "DELETE",
-						"header": [],
-						"url": {
-							"raw": "{{gatewayUrl}}/api/v1/users/profile",
-							"host": ["{{gatewayUrl}}"],
-							"path": ["api", "v1", "users", "profile"]
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Perfil actualizado', function() {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    var json = pm.response.json();",
+									"    pm.expect(json.currency).to.eql('ARS');",
+									"    pm.expect(json.firstName).to.eql('Tobias');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
 						}
-					},
-					"response": []
+					]
 				}
 			]
 		},
 		{
 			"name": "📂 Categories",
-			"description": "CRUD de categorías de transacciones (INCOME/EXPENSE)",
+			"description": "CRUD de categorías. Primero obtiene las del sistema para extraer IDs de EXPENSE e INCOME. Crea una categoría temporal TEST NEWMAN para operaciones CRUD y la elimina al final.",
 			"item": [
 				{
-					"name": "Create Category",
+					"name": "Get All Categories",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{gatewayUrl}}/api/v1/categories",
+							"host": [
+								"{{gatewayUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"categories"
+							]
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Categorías del sistema obtenidas', function() {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    var json = pm.response.json();",
+									"    pm.expect(json).to.be.an('array');",
+									"    pm.expect(json.length).to.be.above(0);",
+									"    var expenseCat = json.find(function(c) { return c.type === 'EXPENSE' && c.parentId === null; });",
+									"    var incomeCat  = json.find(function(c) { return c.type === 'INCOME'  && c.parentId === null; });",
+									"    pm.expect(expenseCat).to.not.be.undefined;",
+									"    pm.expect(incomeCat).to.not.be.undefined;",
+									"    pm.environment.set('expenseCategoryId', expenseCat.id);",
+									"    pm.environment.set('incomeCategoryId',  incomeCat.id);",
+									"    console.log('expenseCategoryId: ' + expenseCat.id + ' (' + expenseCat.name + ')');",
+									"    console.log('incomeCategoryId:  ' + incomeCat.id  + ' (' + incomeCat.name  + ')');",
+									"    console.log('Total categorías: ' + json.length);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
+				},
+				{
+					"name": "Create Category (test)",
 					"request": {
 						"method": "POST",
 						"header": [
@@ -294,12 +396,18 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"name\": \"Freelance\",\n    \"type\": \"INCOME\",\n    \"description\": \"Ingresos por trabajo freelance\"\n}"
+							"raw": "{\n    \"name\": \"TEST NEWMAN\",\n    \"type\": \"EXPENSE\",\n    \"description\": \"Categoría temporal para tests de Newman\"\n}"
 						},
 						"url": {
 							"raw": "{{gatewayUrl}}/api/v1/categories",
-							"host": ["{{gatewayUrl}}"],
-							"path": ["api", "v1", "categories"]
+							"host": [
+								"{{gatewayUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"categories"
+							]
 						}
 					},
 					"response": [],
@@ -308,45 +416,13 @@
 							"listen": "test",
 							"script": {
 								"exec": [
-									"if (pm.response.code === 201) {",
+									"pm.test('Categoría de test creada', function() {",
+									"    pm.expect(pm.response.code).to.eql(201);",
 									"    var json = pm.response.json();",
-									"    pm.environment.set('categoryId', json.id);",
-									"    pm.test('Categoría creada', function() {",
-									"        pm.expect(json.id).to.not.be.undefined;",
-									"        pm.expect(json.name).to.eql('Freelance');",
-									"    });",
-									"}"
-								],
-								"type": "text/javascript"
-							}
-						}
-					]
-				},
-				{
-					"name": "Get All Categories",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{gatewayUrl}}/api/v1/categories",
-							"host": ["{{gatewayUrl}}"],
-							"path": ["api", "v1", "categories"]
-						}
-					},
-					"response": [],
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.test('Categorías obtenidas', function() {",
-									"    pm.expect(pm.response.code).to.eql(200);",
-									"    var json = pm.response.json();",
-									"    pm.expect(json).to.be.an('array');",
-									"    // Guardar primera categoryId si existe",
-									"    if (json.length > 0) {",
-									"        pm.environment.set('categoryId', json[0].id);",
-									"    }",
+									"    pm.expect(json.id).to.not.be.undefined;",
+									"    pm.expect(json.name).to.eql('TEST NEWMAN');",
+									"    pm.expect(json.type).to.eql('EXPENSE');",
+									"    pm.environment.set('testCategoryId', json.id);",
 									"});"
 								],
 								"type": "text/javascript"
@@ -361,11 +437,32 @@
 						"header": [],
 						"url": {
 							"raw": "{{gatewayUrl}}/api/v1/categories/root",
-							"host": ["{{gatewayUrl}}"],
-							"path": ["api", "v1", "categories", "root"]
+							"host": [
+								"{{gatewayUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"categories",
+								"root"
+							]
 						}
 					},
-					"response": []
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Categorías raíz obtenidas', function() {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    pm.expect(pm.response.json()).to.be.an('array');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
 				},
 				{
 					"name": "Get Category by ID",
@@ -373,25 +470,70 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{gatewayUrl}}/api/v1/categories/{{categoryId}}",
-							"host": ["{{gatewayUrl}}"],
-							"path": ["api", "v1", "categories", "{{categoryId}}"]
+							"raw": "{{gatewayUrl}}/api/v1/categories/{{testCategoryId}}",
+							"host": [
+								"{{gatewayUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"categories",
+								"{{testCategoryId}}"
+							]
 						}
 					},
-					"response": []
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Categoría obtenida por ID', function() {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    var json = pm.response.json();",
+									"    pm.expect(json.id).to.eql(parseInt(pm.environment.get('testCategoryId')));",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
 				},
 				{
-					"name": "Get Category by Name",
+					"name": "Get Category by Name (SALARIO)",
 					"request": {
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{gatewayUrl}}/api/v1/categories/name/Alimentación",
-							"host": ["{{gatewayUrl}}"],
-							"path": ["api", "v1", "categories", "name", "Alimentación"]
+							"raw": "{{gatewayUrl}}/api/v1/categories/name/SALARIO",
+							"host": [
+								"{{gatewayUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"categories",
+								"name",
+								"SALARIO"
+							]
 						}
 					},
-					"response": []
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Categoría obtenida por nombre (case insensitive)', function() {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    var json = pm.response.json();",
+									"    pm.expect(json.id).to.not.be.undefined;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
 				},
 				{
 					"name": "Get Subcategories",
@@ -399,12 +541,34 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{gatewayUrl}}/api/v1/categories/{{categoryId}}/subcategories",
-							"host": ["{{gatewayUrl}}"],
-							"path": ["api", "v1", "categories", "{{categoryId}}", "subcategories"]
+							"raw": "{{gatewayUrl}}/api/v1/categories/{{testCategoryId}}/subcategories",
+							"host": [
+								"{{gatewayUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"categories",
+								"{{testCategoryId}}",
+								"subcategories"
+							]
 						}
 					},
-					"response": []
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Subcategorías obtenidas', function() {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    pm.expect(pm.response.json()).to.be.an('array');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
 				},
 				{
 					"name": "Update Category",
@@ -418,34 +582,77 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"name\": \"Freelance IT\",\n    \"description\": \"Ingresos por freelance en tecnología\"\n}"
+							"raw": "{\n    \"name\": \"TEST NEWMAN ACTUALIZADO\",\n    \"description\": \"Categoría actualizada durante tests\"\n}"
 						},
 						"url": {
-							"raw": "{{gatewayUrl}}/api/v1/categories/{{categoryId}}",
-							"host": ["{{gatewayUrl}}"],
-							"path": ["api", "v1", "categories", "{{categoryId}}"]
+							"raw": "{{gatewayUrl}}/api/v1/categories/{{testCategoryId}}",
+							"host": [
+								"{{gatewayUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"categories",
+								"{{testCategoryId}}"
+							]
 						}
 					},
-					"response": []
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Categoría actualizada', function() {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    var json = pm.response.json();",
+									"    pm.expect(json.name).to.eql('TEST NEWMAN ACTUALIZADO');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
 				},
 				{
-					"name": "Delete Category",
+					"name": "Delete Category (test)",
 					"request": {
 						"method": "DELETE",
 						"header": [],
 						"url": {
-							"raw": "{{gatewayUrl}}/api/v1/categories/{{categoryId}}",
-							"host": ["{{gatewayUrl}}"],
-							"path": ["api", "v1", "categories", "{{categoryId}}"]
+							"raw": "{{gatewayUrl}}/api/v1/categories/{{testCategoryId}}",
+							"host": [
+								"{{gatewayUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"categories",
+								"{{testCategoryId}}"
+							]
 						}
 					},
-					"response": []
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Categoría de test eliminada', function() {",
+									"    pm.expect(pm.response.code).to.eql(204);",
+									"    pm.environment.set('testCategoryId', '');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
 				}
 			]
 		},
 		{
 			"name": "💰 Transactions",
-			"description": "CRUD de transacciones (ingresos y gastos)",
+			"description": "CRUD de transacciones. Usa expenseCategoryId e incomeCategoryId creados en Categories.",
 			"item": [
 				{
 					"name": "Create Transaction (EXPENSE)",
@@ -459,12 +666,18 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"description\": \"Compra supermercado\",\n    \"amount\": 15000.50,\n    \"type\": \"EXPENSE\",\n    \"categoryId\": {{categoryId}},\n    \"notes\": \"Compra semanal\"\n}"
+							"raw": "{\n    \"description\": \"Compra supermercado\",\n    \"amount\": 15000.50,\n    \"type\": \"EXPENSE\",\n    \"categoryId\": {{expenseCategoryId}},\n    \"notes\": \"Compra semanal\"\n}"
 						},
 						"url": {
 							"raw": "{{gatewayUrl}}/api/v1/transactions",
-							"host": ["{{gatewayUrl}}"],
-							"path": ["api", "v1", "transactions"]
+							"host": [
+								"{{gatewayUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"transactions"
+							]
 						}
 					},
 					"response": [],
@@ -473,14 +686,14 @@
 							"listen": "test",
 							"script": {
 								"exec": [
-									"if (pm.response.code === 201) {",
+									"pm.test('Transacción EXPENSE creada', function() {",
+									"    pm.expect(pm.response.code).to.eql(201);",
 									"    var json = pm.response.json();",
+									"    pm.expect(json.id).to.not.be.undefined;",
+									"    pm.expect(json.type).to.eql('EXPENSE');",
+									"    pm.expect(json.amount).to.eql(15000.50);",
 									"    pm.environment.set('transactionId', json.id);",
-									"    pm.test('Transacción creada', function() {",
-									"        pm.expect(json.id).to.not.be.undefined;",
-									"        pm.expect(json.type).to.eql('EXPENSE');",
-									"    });",
-									"}"
+									"});"
 								],
 								"type": "text/javascript"
 							}
@@ -499,15 +712,39 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"description\": \"Salario mensual\",\n    \"amount\": 500000.00,\n    \"type\": \"INCOME\",\n    \"categoryId\": {{categoryId}},\n    \"notes\": \"Sueldo febrero 2026\"\n}"
+							"raw": "{\n    \"description\": \"Salario mensual\",\n    \"amount\": 500000.00,\n    \"type\": \"INCOME\",\n    \"categoryId\": {{incomeCategoryId}},\n    \"notes\": \"Sueldo marzo 2026\"\n}"
 						},
 						"url": {
 							"raw": "{{gatewayUrl}}/api/v1/transactions",
-							"host": ["{{gatewayUrl}}"],
-							"path": ["api", "v1", "transactions"]
+							"host": [
+								"{{gatewayUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"transactions"
+							]
 						}
 					},
-					"response": []
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Transacción INCOME creada', function() {",
+									"    pm.expect(pm.response.code).to.eql(201);",
+									"    var json = pm.response.json();",
+									"    pm.expect(json.id).to.not.be.undefined;",
+									"    pm.expect(json.type).to.eql('INCOME');",
+									"    pm.expect(json.amount).to.eql(500000.00);",
+									"    pm.environment.set('incomeTransactionId', json.id);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
 				},
 				{
 					"name": "Get All Transactions",
@@ -516,8 +753,14 @@
 						"header": [],
 						"url": {
 							"raw": "{{gatewayUrl}}/api/v1/transactions",
-							"host": ["{{gatewayUrl}}"],
-							"path": ["api", "v1", "transactions"]
+							"host": [
+								"{{gatewayUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"transactions"
+							]
 						}
 					},
 					"response": [],
@@ -530,9 +773,8 @@
 									"    pm.expect(pm.response.code).to.eql(200);",
 									"    var json = pm.response.json();",
 									"    pm.expect(json).to.be.an('array');",
-									"    if (json.length > 0) {",
-									"        pm.environment.set('transactionId', json[0].id);",
-									"    }",
+									"    pm.expect(json.length).to.be.above(0);",
+									"    console.log('Total transacciones: ' + json.length);",
 									"});"
 								],
 								"type": "text/javascript"
@@ -547,11 +789,33 @@
 						"header": [],
 						"url": {
 							"raw": "{{gatewayUrl}}/api/v1/transactions/{{transactionId}}",
-							"host": ["{{gatewayUrl}}"],
-							"path": ["api", "v1", "transactions", "{{transactionId}}"]
+							"host": [
+								"{{gatewayUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"transactions",
+								"{{transactionId}}"
+							]
 						}
 					},
-					"response": []
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Transacción obtenida por ID', function() {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    var json = pm.response.json();",
+									"    pm.expect(json.id).to.eql(parseInt(pm.environment.get('transactionId')));",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
 				},
 				{
 					"name": "Get by Type (INCOME)",
@@ -560,11 +824,36 @@
 						"header": [],
 						"url": {
 							"raw": "{{gatewayUrl}}/api/v1/transactions/type/INCOME",
-							"host": ["{{gatewayUrl}}"],
-							"path": ["api", "v1", "transactions", "type", "INCOME"]
+							"host": [
+								"{{gatewayUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"transactions",
+								"type",
+								"INCOME"
+							]
 						}
 					},
-					"response": []
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Transacciones INCOME obtenidas', function() {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    var json = pm.response.json();",
+									"    pm.expect(json).to.be.an('array');",
+									"    pm.expect(json.length).to.be.above(0);",
+									"    pm.expect(json[0].type).to.eql('INCOME');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
 				},
 				{
 					"name": "Get by Type (EXPENSE)",
@@ -573,11 +862,36 @@
 						"header": [],
 						"url": {
 							"raw": "{{gatewayUrl}}/api/v1/transactions/type/EXPENSE",
-							"host": ["{{gatewayUrl}}"],
-							"path": ["api", "v1", "transactions", "type", "EXPENSE"]
+							"host": [
+								"{{gatewayUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"transactions",
+								"type",
+								"EXPENSE"
+							]
 						}
 					},
-					"response": []
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Transacciones EXPENSE obtenidas', function() {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    var json = pm.response.json();",
+									"    pm.expect(json).to.be.an('array');",
+									"    pm.expect(json.length).to.be.above(0);",
+									"    pm.expect(json[0].type).to.eql('EXPENSE');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
 				},
 				{
 					"name": "Get by Category",
@@ -585,12 +899,34 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{gatewayUrl}}/api/v1/transactions/category/{{categoryId}}",
-							"host": ["{{gatewayUrl}}"],
-							"path": ["api", "v1", "transactions", "category", "{{categoryId}}"]
+							"raw": "{{gatewayUrl}}/api/v1/transactions/category/{{expenseCategoryId}}",
+							"host": [
+								"{{gatewayUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"transactions",
+								"category",
+								"{{expenseCategoryId}}"
+							]
 						}
 					},
-					"response": []
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Transacciones por categoría obtenidas', function() {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    pm.expect(pm.response.json()).to.be.an('array');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
 				},
 				{
 					"name": "Get by Date Range",
@@ -599,15 +935,42 @@
 						"header": [],
 						"url": {
 							"raw": "{{gatewayUrl}}/api/v1/transactions/date-range?startDate=2026-01-01T00:00:00&endDate=2026-12-31T23:59:59",
-							"host": ["{{gatewayUrl}}"],
-							"path": ["api", "v1", "transactions", "date-range"],
+							"host": [
+								"{{gatewayUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"transactions",
+								"date-range"
+							],
 							"query": [
-								{ "key": "startDate", "value": "2026-01-01T00:00:00" },
-								{ "key": "endDate", "value": "2026-12-31T23:59:59" }
+								{
+									"key": "startDate",
+									"value": "2026-01-01T00:00:00"
+								},
+								{
+									"key": "endDate",
+									"value": "2026-12-31T23:59:59"
+								}
 							]
 						}
 					},
-					"response": []
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Transacciones por rango de fecha obtenidas', function() {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    pm.expect(pm.response.json()).to.be.an('array');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
 				},
 				{
 					"name": "Get by Month",
@@ -616,15 +979,42 @@
 						"header": [],
 						"url": {
 							"raw": "{{gatewayUrl}}/api/v1/transactions/month?year={{currentYear}}&month={{currentMonth}}",
-							"host": ["{{gatewayUrl}}"],
-							"path": ["api", "v1", "transactions", "month"],
+							"host": [
+								"{{gatewayUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"transactions",
+								"month"
+							],
 							"query": [
-								{ "key": "year", "value": "{{currentYear}}" },
-								{ "key": "month", "value": "{{currentMonth}}" }
+								{
+									"key": "year",
+									"value": "{{currentYear}}"
+								},
+								{
+									"key": "month",
+									"value": "{{currentMonth}}"
+								}
 							]
 						}
 					},
-					"response": []
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Transacciones del mes obtenidas', function() {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    pm.expect(pm.response.json()).to.be.an('array');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
 				},
 				{
 					"name": "Get Recent (last 10)",
@@ -633,11 +1023,34 @@
 						"header": [],
 						"url": {
 							"raw": "{{gatewayUrl}}/api/v1/transactions/recent",
-							"host": ["{{gatewayUrl}}"],
-							"path": ["api", "v1", "transactions", "recent"]
+							"host": [
+								"{{gatewayUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"transactions",
+								"recent"
+							]
 						}
 					},
-					"response": []
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Últimas transacciones obtenidas', function() {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    var json = pm.response.json();",
+									"    pm.expect(json).to.be.an('array');",
+									"    pm.expect(json.length).to.be.at.most(10);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
 				},
 				{
 					"name": "Search by Description",
@@ -646,14 +1059,40 @@
 						"header": [],
 						"url": {
 							"raw": "{{gatewayUrl}}/api/v1/transactions/search?keyword=supermercado",
-							"host": ["{{gatewayUrl}}"],
-							"path": ["api", "v1", "transactions", "search"],
+							"host": [
+								"{{gatewayUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"transactions",
+								"search"
+							],
 							"query": [
-								{ "key": "keyword", "value": "supermercado" }
+								{
+									"key": "keyword",
+									"value": "supermercado"
+								}
 							]
 						}
 					},
-					"response": []
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Búsqueda por descripción exitosa', function() {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    var json = pm.response.json();",
+									"    pm.expect(json).to.be.an('array');",
+									"    pm.expect(json.length).to.be.above(0);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
 				},
 				{
 					"name": "Get Balance",
@@ -662,11 +1101,41 @@
 						"header": [],
 						"url": {
 							"raw": "{{gatewayUrl}}/api/v1/transactions/balance",
-							"host": ["{{gatewayUrl}}"],
-							"path": ["api", "v1", "transactions", "balance"]
+							"host": [
+								"{{gatewayUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"transactions",
+								"balance"
+							]
 						}
 					},
-					"response": []
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Balance calculado correctamente', function() {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    var json = pm.response.json();",
+									"    pm.expect(json.balance).to.not.be.undefined;",
+									"    pm.expect(json.totalIncome).to.not.be.undefined;",
+									"    pm.expect(json.totalExpense).to.not.be.undefined;",
+									"    // El balance debe ser ingresos - gastos",
+									"    var expectedBalance = json.totalIncome - json.totalExpense;",
+									"    pm.expect(json.balance).to.be.closeTo(expectedBalance, 0.01);",
+									"    // No debe ser el valor hardcodeado viejo",
+									"    pm.expect(json.balance).to.not.eql(5000.00);",
+									"    console.log('Balance: ' + json.balance + ' (income: ' + json.totalIncome + ', expense: ' + json.totalExpense + ')');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
 				},
 				{
 					"name": "Get Balance by Date Range",
@@ -674,16 +1143,47 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{gatewayUrl}}/api/v1/transactions/balance/date-range?startDate=2026-02-01T00:00:00&endDate=2026-02-28T23:59:59",
-							"host": ["{{gatewayUrl}}"],
-							"path": ["api", "v1", "transactions", "balance", "date-range"],
+							"raw": "{{gatewayUrl}}/api/v1/transactions/balance/date-range?startDate=2026-01-01T00:00:00&endDate=2026-12-31T23:59:59",
+							"host": [
+								"{{gatewayUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"transactions",
+								"balance",
+								"date-range"
+							],
 							"query": [
-								{ "key": "startDate", "value": "2026-02-01T00:00:00" },
-								{ "key": "endDate", "value": "2026-02-28T23:59:59" }
+								{
+									"key": "startDate",
+									"value": "2026-01-01T00:00:00"
+								},
+								{
+									"key": "endDate",
+									"value": "2026-12-31T23:59:59"
+								}
 							]
 						}
 					},
-					"response": []
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Balance por rango de fecha', function() {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    var json = pm.response.json();",
+									"    pm.expect(json.balance).to.not.be.undefined;",
+									"    pm.expect(json.periodStart).to.not.be.undefined;",
+									"    pm.expect(json.periodEnd).to.not.be.undefined;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
 				},
 				{
 					"name": "Update Transaction",
@@ -701,11 +1201,33 @@
 						},
 						"url": {
 							"raw": "{{gatewayUrl}}/api/v1/transactions/{{transactionId}}",
-							"host": ["{{gatewayUrl}}"],
-							"path": ["api", "v1", "transactions", "{{transactionId}}"]
+							"host": [
+								"{{gatewayUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"transactions",
+								"{{transactionId}}"
+							]
 						}
 					},
-					"response": []
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Transacción actualizada', function() {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    var json = pm.response.json();",
+									"    pm.expect(json.amount).to.eql(16500.00);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
 				},
 				{
 					"name": "Delete Transaction",
@@ -714,11 +1236,64 @@
 						"header": [],
 						"url": {
 							"raw": "{{gatewayUrl}}/api/v1/transactions/{{transactionId}}",
-							"host": ["{{gatewayUrl}}"],
-							"path": ["api", "v1", "transactions", "{{transactionId}}"]
+							"host": [
+								"{{gatewayUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"transactions",
+								"{{transactionId}}"
+							]
 						}
 					},
-					"response": []
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Transacción eliminada', function() {",
+									"    pm.expect(pm.response.code).to.eql(204);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
+				},
+				{
+					"name": "Delete Transaction (INCOME)",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{gatewayUrl}}/api/v1/transactions/{{incomeTransactionId}}",
+							"host": [
+								"{{gatewayUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"transactions",
+								"{{incomeTransactionId}}"
+							]
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Transacción INCOME eliminada', function() {",
+									"    pm.expect(pm.response.code).to.eql(204);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
 				}
 			]
 		},
@@ -733,15 +1308,44 @@
 						"header": [],
 						"url": {
 							"raw": "{{gatewayUrl}}/api/v1/reports/monthly?year={{currentYear}}&month={{currentMonth}}",
-							"host": ["{{gatewayUrl}}"],
-							"path": ["api", "v1", "reports", "monthly"],
+							"host": [
+								"{{gatewayUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"reports",
+								"monthly"
+							],
 							"query": [
-								{ "key": "year", "value": "{{currentYear}}" },
-								{ "key": "month", "value": "{{currentMonth}}" }
+								{
+									"key": "year",
+									"value": "{{currentYear}}"
+								},
+								{
+									"key": "month",
+									"value": "{{currentMonth}}"
+								}
 							]
 						}
 					},
-					"response": []
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Resumen mensual obtenido', function() {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    var json = pm.response.json();",
+									"    pm.expect(json).to.have.property('totalIncome');",
+									"    pm.expect(json).to.have.property('totalExpense');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
 				},
 				{
 					"name": "Expenses by Category (monthly)",
@@ -750,15 +1354,43 @@
 						"header": [],
 						"url": {
 							"raw": "{{gatewayUrl}}/api/v1/reports/expenses/by-category?year={{currentYear}}&month={{currentMonth}}",
-							"host": ["{{gatewayUrl}}"],
-							"path": ["api", "v1", "reports", "expenses", "by-category"],
+							"host": [
+								"{{gatewayUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"reports",
+								"expenses",
+								"by-category"
+							],
 							"query": [
-								{ "key": "year", "value": "{{currentYear}}" },
-								{ "key": "month", "value": "{{currentMonth}}" }
+								{
+									"key": "year",
+									"value": "{{currentYear}}"
+								},
+								{
+									"key": "month",
+									"value": "{{currentMonth}}"
+								}
 							]
 						}
 					},
-					"response": []
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Gastos por categoría obtenidos', function() {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    pm.expect(pm.response.json()).to.be.an('array');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
 				},
 				{
 					"name": "Incomes by Category (monthly)",
@@ -767,15 +1399,43 @@
 						"header": [],
 						"url": {
 							"raw": "{{gatewayUrl}}/api/v1/reports/incomes/by-category?year={{currentYear}}&month={{currentMonth}}",
-							"host": ["{{gatewayUrl}}"],
-							"path": ["api", "v1", "reports", "incomes", "by-category"],
+							"host": [
+								"{{gatewayUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"reports",
+								"incomes",
+								"by-category"
+							],
 							"query": [
-								{ "key": "year", "value": "{{currentYear}}" },
-								{ "key": "month", "value": "{{currentMonth}}" }
+								{
+									"key": "year",
+									"value": "{{currentYear}}"
+								},
+								{
+									"key": "month",
+									"value": "{{currentMonth}}"
+								}
 							]
 						}
 					},
-					"response": []
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Ingresos por categoría obtenidos', function() {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    pm.expect(pm.response.json()).to.be.an('array');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
 				},
 				{
 					"name": "All Expenses by Category (historic)",
@@ -784,11 +1444,36 @@
 						"header": [],
 						"url": {
 							"raw": "{{gatewayUrl}}/api/v1/reports/expenses/all-by-category",
-							"host": ["{{gatewayUrl}}"],
-							"path": ["api", "v1", "reports", "expenses", "all-by-category"]
+							"host": [
+								"{{gatewayUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"reports",
+								"expenses",
+								"all-by-category"
+							]
 						}
 					},
-					"response": []
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Histórico de gastos por categoría obtenido', function() {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    var json = pm.response.json();",
+									"    pm.expect(json).to.have.property('categories');",
+									"    pm.expect(json.categories).to.be.an('array');",
+									"    pm.expect(json).to.have.property('grandTotal');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
 				},
 				{
 					"name": "All Incomes by Category (historic)",
@@ -797,11 +1482,36 @@
 						"header": [],
 						"url": {
 							"raw": "{{gatewayUrl}}/api/v1/reports/incomes/all-by-category",
-							"host": ["{{gatewayUrl}}"],
-							"path": ["api", "v1", "reports", "incomes", "all-by-category"]
+							"host": [
+								"{{gatewayUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"reports",
+								"incomes",
+								"all-by-category"
+							]
 						}
 					},
-					"response": []
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Histórico de ingresos por categoría obtenido', function() {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    var json = pm.response.json();",
+									"    pm.expect(json).to.have.property('categories');",
+									"    pm.expect(json.categories).to.be.an('array');",
+									"    pm.expect(json).to.have.property('grandTotal');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
 				},
 				{
 					"name": "Monthly Comparison (last 6 months)",
@@ -810,14 +1520,38 @@
 						"header": [],
 						"url": {
 							"raw": "{{gatewayUrl}}/api/v1/reports/monthly-comparison?months=6",
-							"host": ["{{gatewayUrl}}"],
-							"path": ["api", "v1", "reports", "monthly-comparison"],
+							"host": [
+								"{{gatewayUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"reports",
+								"monthly-comparison"
+							],
 							"query": [
-								{ "key": "months", "value": "6" }
+								{
+									"key": "months",
+									"value": "6"
+								}
 							]
 						}
 					},
-					"response": []
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Comparación mensual obtenida', function() {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    pm.expect(pm.response.json()).to.be.an('array');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
 				}
 			]
 		},
@@ -837,12 +1571,18 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"type\": \"ACCION\",\n    \"description\": \"Acciones de GGAL (Galicia)\",\n    \"initialCapital\": 50000.00,\n    \"currentCapital\": 55000.00,\n    \"notes\": \"Compra inicial febrero 2026\",\n    \"createLinkedTransaction\": false\n}"
+							"raw": "{\n    \"type\": \"ACCION\",\n    \"description\": \"Acciones de GGAL (Galicia)\",\n    \"initialCapital\": 50000.00,\n    \"currentCapital\": 55000.00,\n    \"notes\": \"Compra inicial marzo 2026\",\n    \"createLinkedTransaction\": false\n}"
 						},
 						"url": {
 							"raw": "{{gatewayUrl}}/api/v1/investments",
-							"host": ["{{gatewayUrl}}"],
-							"path": ["api", "v1", "investments"]
+							"host": [
+								"{{gatewayUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"investments"
+							]
 						}
 					},
 					"response": [],
@@ -851,13 +1591,13 @@
 							"listen": "test",
 							"script": {
 								"exec": [
-									"if (pm.response.code === 201) {",
+									"pm.test('Inversión creada', function() {",
+									"    pm.expect(pm.response.code).to.eql(201);",
 									"    var json = pm.response.json();",
+									"    pm.expect(json.id).to.not.be.undefined;",
+									"    pm.expect(json.type).to.eql('ACCION');",
 									"    pm.environment.set('investmentId', json.id);",
-									"    pm.test('Inversión creada', function() {",
-									"        pm.expect(json.id).to.not.be.undefined;",
-									"    });",
-									"}"
+									"});"
 								],
 								"type": "text/javascript"
 							}
@@ -876,15 +1616,77 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"type\": \"PLAZO_FIJO\",\n    \"description\": \"Plazo fijo Banco Nación 30 días\",\n    \"initialCapital\": 200000.00,\n    \"currentCapital\": 200000.00,\n    \"notes\": \"Tasa 75% TNA\"\n}"
+							"raw": "{\n    \"type\": \"PLAZO_FIJO\",\n    \"description\": \"Plazo fijo Banco Nación 30 días\",\n    \"initialCapital\": 200000.00,\n    \"currentCapital\": 200000.00,\n    \"notes\": \"Tasa 75% TNA\",\n    \"createLinkedTransaction\": false\n}"
 						},
 						"url": {
 							"raw": "{{gatewayUrl}}/api/v1/investments",
-							"host": ["{{gatewayUrl}}"],
-							"path": ["api", "v1", "investments"]
+							"host": [
+								"{{gatewayUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"investments"
+							]
 						}
 					},
-					"response": []
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Inversión Plazo Fijo creada', function() {",
+									"    pm.expect(pm.response.code).to.eql(201);",
+									"    var json = pm.response.json();",
+									"    pm.expect(json.type).to.eql('PLAZO_FIJO');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
+				},
+				{
+					"name": "Create Investment (tipo inválido — espera 400)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"type\": \"TIPO_INVALIDO\",\n    \"description\": \"Test de validación\",\n    \"initialCapital\": 1000.00,\n    \"currentCapital\": 1000.00\n}"
+						},
+						"url": {
+							"raw": "{{gatewayUrl}}/api/v1/investments",
+							"host": [
+								"{{gatewayUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"investments"
+							]
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Tipo inválido rechazado con 400', function() {",
+									"    pm.expect(pm.response.code).to.eql(400);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
 				},
 				{
 					"name": "Get All Investments",
@@ -893,8 +1695,14 @@
 						"header": [],
 						"url": {
 							"raw": "{{gatewayUrl}}/api/v1/investments",
-							"host": ["{{gatewayUrl}}"],
-							"path": ["api", "v1", "investments"]
+							"host": [
+								"{{gatewayUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"investments"
+							]
 						}
 					},
 					"response": [],
@@ -907,9 +1715,8 @@
 									"    pm.expect(pm.response.code).to.eql(200);",
 									"    var json = pm.response.json();",
 									"    pm.expect(json).to.be.an('array');",
-									"    if (json.length > 0) {",
-									"        pm.environment.set('investmentId', json[0].id);",
-									"    }",
+									"    pm.expect(json.length).to.be.above(0);",
+									"    pm.environment.set('investmentId', json[0].id);",
 									"});"
 								],
 								"type": "text/javascript"
@@ -924,11 +1731,33 @@
 						"header": [],
 						"url": {
 							"raw": "{{gatewayUrl}}/api/v1/investments/{{investmentId}}",
-							"host": ["{{gatewayUrl}}"],
-							"path": ["api", "v1", "investments", "{{investmentId}}"]
+							"host": [
+								"{{gatewayUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"investments",
+								"{{investmentId}}"
+							]
 						}
 					},
-					"response": []
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Inversión obtenida por ID', function() {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    var json = pm.response.json();",
+									"    pm.expect(json.id).to.eql(parseInt(pm.environment.get('investmentId')));",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
 				},
 				{
 					"name": "Get by Type (ACCION)",
@@ -937,11 +1766,33 @@
 						"header": [],
 						"url": {
 							"raw": "{{gatewayUrl}}/api/v1/investments/type/ACCION",
-							"host": ["{{gatewayUrl}}"],
-							"path": ["api", "v1", "investments", "type", "ACCION"]
+							"host": [
+								"{{gatewayUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"investments",
+								"type",
+								"ACCION"
+							]
 						}
 					},
-					"response": []
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Inversiones ACCION obtenidas', function() {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    pm.expect(pm.response.json()).to.be.an('array');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
 				},
 				{
 					"name": "Get Portfolio Summary",
@@ -950,11 +1801,36 @@
 						"header": [],
 						"url": {
 							"raw": "{{gatewayUrl}}/api/v1/investments/portfolio/summary",
-							"host": ["{{gatewayUrl}}"],
-							"path": ["api", "v1", "investments", "portfolio", "summary"]
+							"host": [
+								"{{gatewayUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"investments",
+								"portfolio",
+								"summary"
+							]
 						}
 					},
-					"response": []
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Portfolio summary obtenido', function() {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    var json = pm.response.json();",
+									"    pm.expect(json).to.have.property('totalInvested');",
+									"    pm.expect(json).to.have.property('totalCurrentValue');",
+									"    pm.expect(json.totalInvestments).to.be.above(0);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
 				},
 				{
 					"name": "Update Investment",
@@ -972,11 +1848,33 @@
 						},
 						"url": {
 							"raw": "{{gatewayUrl}}/api/v1/investments/{{investmentId}}",
-							"host": ["{{gatewayUrl}}"],
-							"path": ["api", "v1", "investments", "{{investmentId}}"]
+							"host": [
+								"{{gatewayUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"investments",
+								"{{investmentId}}"
+							]
 						}
 					},
-					"response": []
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Inversión actualizada', function() {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    var json = pm.response.json();",
+									"    pm.expect(json.currentCapital).to.eql(58000.00);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
 				},
 				{
 					"name": "Delete Investment",
@@ -985,11 +1883,31 @@
 						"header": [],
 						"url": {
 							"raw": "{{gatewayUrl}}/api/v1/investments/{{investmentId}}",
-							"host": ["{{gatewayUrl}}"],
-							"path": ["api", "v1", "investments", "{{investmentId}}"]
+							"host": [
+								"{{gatewayUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"investments",
+								"{{investmentId}}"
+							]
 						}
 					},
-					"response": []
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Inversión eliminada', function() {",
+									"    pm.expect(pm.response.code).to.eql(204);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
 				}
 			]
 		},
@@ -1009,12 +1927,18 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"name\": \"Vacaciones Europa\",\n    \"description\": \"Ahorro para viaje a Europa en verano 2027\",\n    \"targetAmount\": 3000000.00,\n    \"monthlyTargetAmount\": 250000.00,\n    \"autoContribution\": true,\n    \"startDate\": \"2026-02-01\",\n    \"targetDate\": \"2027-01-01\",\n    \"icon\": \"✈️\"\n}"
+							"raw": "{\n    \"name\": \"Vacaciones Europa\",\n    \"description\": \"Ahorro para viaje a Europa en verano 2027\",\n    \"targetAmount\": 3000000.00,\n    \"monthlyTargetAmount\": 250000.00,\n    \"autoContribution\": true,\n    \"startDate\": \"2026-03-01\",\n    \"targetDate\": \"2027-01-01\",\n    \"icon\": \"✈️\"\n}"
 						},
 						"url": {
 							"raw": "{{gatewayUrl}}/api/v1/goals",
-							"host": ["{{gatewayUrl}}"],
-							"path": ["api", "v1", "goals"]
+							"host": [
+								"{{gatewayUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"goals"
+							]
 						}
 					},
 					"response": [],
@@ -1023,14 +1947,13 @@
 							"listen": "test",
 							"script": {
 								"exec": [
-									"if (pm.response.code === 201) {",
+									"pm.test('Meta creada', function() {",
+									"    pm.expect(pm.response.code).to.eql(201);",
 									"    var json = pm.response.json();",
+									"    pm.expect(json.id).to.not.be.undefined;",
+									"    pm.expect(json.name).to.eql('Vacaciones Europa');",
 									"    pm.environment.set('goalId', json.id);",
-									"    pm.test('Meta creada', function() {",
-									"        pm.expect(json.id).to.not.be.undefined;",
-									"        pm.expect(json.name).to.eql('Vacaciones Europa');",
-									"    });",
-									"}"
+									"});"
 								],
 								"type": "text/javascript"
 							}
@@ -1049,15 +1972,34 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"name\": \"Fondo de emergencia\",\n    \"description\": \"6 meses de gastos\",\n    \"targetAmount\": 1500000.00,\n    \"monthlyTargetAmount\": 100000.00,\n    \"autoContribution\": false,\n    \"startDate\": \"2026-02-01\",\n    \"icon\": \"🏦\"\n}"
+							"raw": "{\n    \"name\": \"Fondo de emergencia\",\n    \"description\": \"6 meses de gastos\",\n    \"targetAmount\": 1500000.00,\n    \"monthlyTargetAmount\": 100000.00,\n    \"autoContribution\": false,\n    \"startDate\": \"2026-03-01\",\n    \"icon\": \"🏦\"\n}"
 						},
 						"url": {
 							"raw": "{{gatewayUrl}}/api/v1/goals",
-							"host": ["{{gatewayUrl}}"],
-							"path": ["api", "v1", "goals"]
+							"host": [
+								"{{gatewayUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"goals"
+							]
 						}
 					},
-					"response": []
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Meta sin fecha límite creada', function() {",
+									"    pm.expect(pm.response.code).to.eql(201);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
 				},
 				{
 					"name": "Get All Goals",
@@ -1066,8 +2008,14 @@
 						"header": [],
 						"url": {
 							"raw": "{{gatewayUrl}}/api/v1/goals",
-							"host": ["{{gatewayUrl}}"],
-							"path": ["api", "v1", "goals"]
+							"host": [
+								"{{gatewayUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"goals"
+							]
 						}
 					},
 					"response": [],
@@ -1080,9 +2028,8 @@
 									"    pm.expect(pm.response.code).to.eql(200);",
 									"    var json = pm.response.json();",
 									"    pm.expect(json).to.be.an('array');",
-									"    if (json.length > 0) {",
-									"        pm.environment.set('goalId', json[0].id);",
-									"    }",
+									"    pm.expect(json.length).to.be.above(0);",
+									"    pm.environment.set('goalId', json[0].id);",
 									"});"
 								],
 								"type": "text/javascript"
@@ -1097,11 +2044,33 @@
 						"header": [],
 						"url": {
 							"raw": "{{gatewayUrl}}/api/v1/goals/{{goalId}}",
-							"host": ["{{gatewayUrl}}"],
-							"path": ["api", "v1", "goals", "{{goalId}}"]
+							"host": [
+								"{{gatewayUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"goals",
+								"{{goalId}}"
+							]
 						}
 					},
-					"response": []
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Meta obtenida por ID', function() {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    var json = pm.response.json();",
+									"    pm.expect(json.id).to.not.be.undefined;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
 				},
 				{
 					"name": "Get Goals by Status (ACTIVE)",
@@ -1110,11 +2079,33 @@
 						"header": [],
 						"url": {
 							"raw": "{{gatewayUrl}}/api/v1/goals/status/ACTIVE",
-							"host": ["{{gatewayUrl}}"],
-							"path": ["api", "v1", "goals", "status", "ACTIVE"]
+							"host": [
+								"{{gatewayUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"goals",
+								"status",
+								"ACTIVE"
+							]
 						}
 					},
-					"response": []
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Metas ACTIVE obtenidas', function() {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    pm.expect(pm.response.json()).to.be.an('array');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
 				},
 				{
 					"name": "Update Goal",
@@ -1132,11 +2123,33 @@
 						},
 						"url": {
 							"raw": "{{gatewayUrl}}/api/v1/goals/{{goalId}}",
-							"host": ["{{gatewayUrl}}"],
-							"path": ["api", "v1", "goals", "{{goalId}}"]
+							"host": [
+								"{{gatewayUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"goals",
+								"{{goalId}}"
+							]
 						}
 					},
-					"response": []
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Meta actualizada', function() {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    var json = pm.response.json();",
+									"    pm.expect(json.monthlyTargetAmount).to.eql(300000.00);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
 				},
 				{
 					"name": "Add Contribution",
@@ -1150,15 +2163,38 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"amount\": 250000.00,\n    \"notes\": \"Aporte manual de febrero\"\n}"
+							"raw": "{\n    \"amount\": 250000.00,\n    \"notes\": \"Aporte manual de marzo\"\n}"
 						},
 						"url": {
 							"raw": "{{gatewayUrl}}/api/v1/goals/{{goalId}}/contributions",
-							"host": ["{{gatewayUrl}}"],
-							"path": ["api", "v1", "goals", "{{goalId}}", "contributions"]
+							"host": [
+								"{{gatewayUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"goals",
+								"{{goalId}}",
+								"contributions"
+							]
 						}
 					},
-					"response": []
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Aporte añadido', function() {",
+									"    pm.expect(pm.response.code).to.eql(201);",
+									"    var json = pm.response.json();",
+									"    pm.expect(json.amount).to.eql(250000.00);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
 				},
 				{
 					"name": "Adjust Contribution",
@@ -1172,15 +2208,37 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"amount\": 50000.00,\n    \"year\": 2026,\n    \"month\": 2,\n    \"notes\": \"Usé parte del ahorro para emergencia\",\n    \"isReduction\": true\n}"
+							"raw": "{\n    \"amount\": 50000.00,\n    \"year\": 2026,\n    \"month\": 3,\n    \"notes\": \"Usé parte del ahorro para emergencia\",\n    \"isReduction\": true\n}"
 						},
 						"url": {
 							"raw": "{{gatewayUrl}}/api/v1/goals/{{goalId}}/contributions/adjust",
-							"host": ["{{gatewayUrl}}"],
-							"path": ["api", "v1", "goals", "{{goalId}}", "contributions", "adjust"]
+							"host": [
+								"{{gatewayUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"goals",
+								"{{goalId}}",
+								"contributions",
+								"adjust"
+							]
 						}
 					},
-					"response": []
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Ajuste de aporte realizado', function() {",
+									"    pm.expect(pm.response.code).to.eql(201);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
 				},
 				{
 					"name": "Get Contributions",
@@ -1189,11 +2247,35 @@
 						"header": [],
 						"url": {
 							"raw": "{{gatewayUrl}}/api/v1/goals/{{goalId}}/contributions",
-							"host": ["{{gatewayUrl}}"],
-							"path": ["api", "v1", "goals", "{{goalId}}", "contributions"]
+							"host": [
+								"{{gatewayUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"goals",
+								"{{goalId}}",
+								"contributions"
+							]
 						}
 					},
-					"response": []
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Aportes obtenidos', function() {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    var json = pm.response.json();",
+									"    pm.expect(json).to.be.an('array');",
+									"    pm.expect(json.length).to.be.above(0);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
 				},
 				{
 					"name": "Get Statistics",
@@ -1202,11 +2284,36 @@
 						"header": [],
 						"url": {
 							"raw": "{{gatewayUrl}}/api/v1/goals/{{goalId}}/statistics",
-							"host": ["{{gatewayUrl}}"],
-							"path": ["api", "v1", "goals", "{{goalId}}", "statistics"]
+							"host": [
+								"{{gatewayUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"goals",
+								"{{goalId}}",
+								"statistics"
+							]
 						}
 					},
-					"response": []
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Estadísticas de meta obtenidas', function() {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    var json = pm.response.json();",
+									"    pm.expect(json).to.have.property('goalId');",
+									"    pm.expect(json).to.have.property('totalContributed');",
+									"    pm.expect(json).to.have.property('progressPercentage');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
 				},
 				{
 					"name": "Pause Goal",
@@ -1224,11 +2331,31 @@
 						},
 						"url": {
 							"raw": "{{gatewayUrl}}/api/v1/goals/{{goalId}}",
-							"host": ["{{gatewayUrl}}"],
-							"path": ["api", "v1", "goals", "{{goalId}}"]
+							"host": [
+								"{{gatewayUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"goals",
+								"{{goalId}}"
+							]
 						}
 					},
-					"response": []
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Meta pausada', function() {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
 				},
 				{
 					"name": "Delete Goal",
@@ -1237,17 +2364,37 @@
 						"header": [],
 						"url": {
 							"raw": "{{gatewayUrl}}/api/v1/goals/{{goalId}}",
-							"host": ["{{gatewayUrl}}"],
-							"path": ["api", "v1", "goals", "{{goalId}}"]
+							"host": [
+								"{{gatewayUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"goals",
+								"{{goalId}}"
+							]
 						}
 					},
-					"response": []
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Meta eliminada', function() {",
+									"    pm.expect(pm.response.code).to.eql(204);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
 				}
 			]
 		},
 		{
 			"name": "🏦 Account Summary",
-			"description": "Resumen combinado (balance + inversiones)",
+			"description": "Resumen combinado: balance real + inversiones",
 			"item": [
 				{
 					"name": "Get Account Summary",
@@ -1256,11 +2403,43 @@
 						"header": [],
 						"url": {
 							"raw": "{{gatewayUrl}}/api/v1/accounts/summary",
-							"host": ["{{gatewayUrl}}"],
-							"path": ["api", "v1", "accounts", "summary"]
+							"host": [
+								"{{gatewayUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"accounts",
+								"summary"
+							]
 						}
 					},
-					"response": []
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Account summary obtenido con balance real', function() {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    var json = pm.response.json();",
+									"    pm.expect(json).to.have.property('accountBalance');",
+									"    pm.expect(json).to.have.property('investments');",
+									"    pm.expect(json).to.have.property('netWorth');",
+									"    pm.expect(json).to.have.property('userId');",
+									"    // El balance NO debe ser el hardcodeado 5000",
+									"    pm.expect(json.accountBalance).to.not.eql(5000);",
+									"    pm.expect(json.accountBalance).to.not.eql(5000.00);",
+									"    // netWorth debe ser accountBalance + investments",
+									"    var expectedNetWorth = json.accountBalance + json.investments;",
+									"    pm.expect(json.netWorth).to.be.closeTo(expectedNetWorth, 0.01);",
+									"    console.log('accountBalance: ' + json.accountBalance + ', investments: ' + json.investments + ', netWorth: ' + json.netWorth);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
 				}
 			]
 		},
@@ -1278,11 +2457,66 @@
 						"header": [],
 						"url": {
 							"raw": "{{gatewayUrl}}/api/v1/users/health",
-							"host": ["{{gatewayUrl}}"],
-							"path": ["api", "v1", "users", "health"]
+							"host": [
+								"{{gatewayUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"health"
+							]
 						}
 					},
-					"response": []
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('User service UP', function() {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
+				},
+				{
+					"name": "Account Service Health",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{gatewayUrl}}/api/v1/accounts/health",
+							"host": [
+								"{{gatewayUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"accounts",
+								"health"
+							]
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Account service UP', function() {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    var json = pm.response.json();",
+									"    pm.expect(json.status).to.eql('UP');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
 				},
 				{
 					"name": "Investment Service Health",
@@ -1291,11 +2525,31 @@
 						"header": [],
 						"url": {
 							"raw": "{{gatewayUrl}}/api/v1/investments/health",
-							"host": ["{{gatewayUrl}}"],
-							"path": ["api", "v1", "investments", "health"]
+							"host": [
+								"{{gatewayUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"investments",
+								"health"
+							]
 						}
 					},
-					"response": []
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Investment service UP', function() {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
 				},
 				{
 					"name": "Goals Service Health",
@@ -1304,14 +2558,81 @@
 						"header": [],
 						"url": {
 							"raw": "{{gatewayUrl}}/api/v1/goals/health",
-							"host": ["{{gatewayUrl}}"],
-							"path": ["api", "v1", "goals", "health"]
+							"host": [
+								"{{gatewayUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"goals",
+								"health"
+							]
 						}
 					},
-					"response": []
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Goals service UP', function() {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "🧹 Cleanup",
+			"description": "Limpieza final: elimina el usuario de prueba. Las categorías del sistema no se tocan.",
+			"item": [
+				{
+					"name": "Delete User",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{gatewayUrl}}/api/v1/users/profile",
+							"host": [
+								"{{gatewayUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"profile"
+							]
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Usuario de prueba eliminado', function() {",
+									"    pm.expect(pm.response.code).to.eql(204);",
+									"    pm.environment.set('accessToken', '');",
+									"    pm.environment.set('refreshToken', '');",
+									"    pm.environment.set('userId', '');",
+									"    pm.environment.set('expenseCategoryId', '');",
+									"    pm.environment.set('incomeCategoryId', '');",
+									"    pm.environment.set('transactionId', '');",
+									"    pm.environment.set('incomeTransactionId', '');",
+									"    pm.environment.set('investmentId', '');",
+									"    pm.environment.set('goalId', '');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
 				}
 			]
 		}
 	]
 }
-
