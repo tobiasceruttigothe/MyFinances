@@ -54,4 +54,22 @@
       radial-gradient(circle at 90% 100%, rgba(196,170,120,0.16), transparent 50%);
     background-attachment: fixed;
   }
+
+  /* Tinta scope — Inversiones. Reasigna las variables genéricas a la paleta
+     tinta para que los componentes (Card, Button, Input, etc.) se vean
+     en azul oscuro automáticamente, sin código duplicado. */
+  [data-mode="tinta"] {
+    --color-paper:      var(--color-tinta-bg);
+    --color-paper-2:    var(--color-tinta-bg-2);
+    --color-ink:        var(--color-tinta-ink);
+    --color-rule:       var(--color-tinta-rule);
+    --color-rule-soft:  rgba(54, 70, 90, 0.5);
+    --color-sepia:      var(--color-tinta-sepia);
+    --color-sepia-soft: rgba(199, 169, 116, 0.12);
+    --color-sage:       var(--color-tinta-sage);
+    --color-sage-soft:  rgba(158, 199, 156, 0.15);
+    --color-wine:       var(--color-tinta-wine);
+    --color-wine-soft:  rgba(210, 126, 126, 0.12);
+    --color-gold:       var(--color-tinta-gold);
+  }
 }

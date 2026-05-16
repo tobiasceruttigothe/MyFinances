@@ -3,32 +3,27 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Plus, Trash2, Pencil, X, TrendingUp, TrendingDown, Briefcase } from 'lucide-react'
+import { X, Pencil, Trash2 } from 'lucide-react'
 import { investmentsApi } from '@/api/investments'
 import { useAuthStore } from '@/stores/authStore'
 import { useToast } from '@/components/ui/toast'
 import type { CreateInvestmentRequest, Investment } from '@/types/investment'
-import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { CardSkeleton } from '@/components/ui/skeleton'
-import { formatCurrency, formatPercent } from '@/lib/utils'
-import { cn } from '@/lib/utils'
+import { formatCurrency, formatPercent, cn } from '@/lib/utils'
 
 const INVESTMENT_TYPES = [
-  { value: 'ACCION', label: 'Acciones' },
-  { value: 'BONO', label: 'Bonos' },
-  { value: 'PLAZO_FIJO', label: 'Plazo Fijo' },
-  { value: 'CRYPTO', label: 'Criptomonedas' },
-  { value: 'FONDO', label: 'Fondos de Inversión' },
-  { value: 'ETF', label: 'ETF' },
-  { value: 'INMUEBLE', label: 'Inmuebles' },
-  { value: 'CEDEAR', label: 'CEDEARs' },
-  { value: 'DIVISA', label: 'Divisas/Forex' },
+  { value: 'ACCION',      label: 'Acciones' },
+  { value: 'BONO',        label: 'Bonos' },
+  { value: 'PLAZO_FIJO',  label: 'Plazo Fijo' },
+  { value: 'CRYPTO',      label: 'Criptomonedas' },
+  { value: 'FONDO',       label: 'Fondos de Inversión' },
+  { value: 'ETF',         label: 'ETF' },
+  { value: 'INMUEBLE',    label: 'Inmuebles' },
+  { value: 'CEDEAR',      label: 'CEDEARs' },
+  { value: 'DIVISA',      label: 'Divisas/Forex' },
   { value: 'COMMODITIES', label: 'Commodities' },
-  { value: 'OTRO', label: 'Otro' },
+  { value: 'OTRO',        label: 'Otro' },
 ]
 
 const schema = z.object({
@@ -40,6 +35,36 @@ const schema = z.object({
   createLinkedTransaction: z.boolean().optional(),
 })
 type FormData = z.infer<typeof schema>
+
+// Placeholder sparkline: hasta que el backend exponga history, derivamos una
+// trayectoria deterministica del id (semilla) y el roi (pendiente).
+function syntheticSpark(seed: number, slope: number, count = 12): number[] {
+  const pts: number[] = []
+  for (let i = 0; i < count; i++) {
+    const t = i / (count - 1)
+    const drift = slope * t
+    const noise = Math.sin(seed * 1.7 + i * 0.9) * Math.max(Math.abs(slope) * 0.15, 0.8)
+    pts.push(drift + noise)
+  }
+  return pts
+}
+
+function Sparkline({ data, positive }: { data: number[]; positive: boolean }) {
+  const w = 80, h = 22
+  const min = Math.min(...data)
+  const max = Math.max(...data)
+  const range = max - min || 1
+  const step = w / (data.length - 1)
+  const pts = data.map((v, i) => `${i * step},${h - ((v - min) / range) * h}`).join(' ')
+  const lastY = h - ((data[data.length - 1] - min) / range) * h
+  const stroke = positive ? 'var(--color-sage)' : 'var(--color-wine)'
+  return (
+    <svg width={w} height={h} aria-hidden style={{ overflow: 'visible' }}>
+      <polyline points={pts} fill="none" stroke={stroke} strokeWidth={1.2} strokeLinejoin="round" strokeLinecap="round" />
+      <circle cx={w} cy={lastY} r={1.8} fill={stroke} />
+    </svg>
+  )
+}
 
 export default function InvestmentsPage() {
   const qc = useQueryClient()
@@ -58,9 +83,8 @@ export default function InvestmentsPage() {
     queryFn: investmentsApi.getPortfolioSummary,
   })
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<FormData>({
-    resolver: zodResolver(schema) as any,
+    resolver: zodResolver(schema) as never,
     defaultValues: { createLinkedTransaction: false, type: 'ACCION' },
   })
 
@@ -119,187 +143,306 @@ export default function InvestmentsPage() {
     else await createMutation.mutateAsync(data as CreateInvestmentRequest)
   }
 
+  const totalCurrent = portfolio?.totalCurrentValue ?? 0
+  const overallPositive = (portfolio?.overallROI ?? 0) >= 0
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Inversiones</h1>
-          <p className="text-gray-500 text-sm mt-0.5">Seguí el rendimiento de tu portafolio</p>
+    <div
+      data-mode="tinta"
+      className="-mx-11 -my-8 px-11 py-8 min-h-[calc(100vh-0px)] bg-paper text-ink"
+    >
+      <div className="space-y-6">
+        <div className="flex items-baseline justify-between gap-4 flex-wrap">
+          <div>
+            <div className="text-[11px] tracking-[0.2em] uppercase text-sepia font-semibold">
+              Portafolio · {investments.length} {investments.length === 1 ? 'posición' : 'posiciones'}
+            </div>
+            <h1 className="font-serif font-normal text-[36px] leading-[1.05] tracking-tight mt-1.5">
+              Tu portafolio{' '}
+              {portfolio ? (
+                <em className={cn('not-italic font-serif italic', overallPositive ? 'text-sage' : 'text-wine')}>
+                  rinde {formatPercent(portfolio.overallROI)}.
+                </em>
+              ) : (
+                <em className="text-sepia">en revisión.</em>
+              )}
+            </h1>
+          </div>
+          <button
+            onClick={() => { cancelForm(); setShowForm(true) }}
+            className="inline-flex items-center gap-2 bg-ink text-paper rounded-pill px-[18px] py-[11px] text-[13.5px] font-semibold leading-none"
+          >
+            <span className="text-base leading-none">+</span> Nueva posición
+          </button>
         </div>
-        <Button onClick={() => { cancelForm(); setShowForm(true) }} className="gap-2 bg-blue-600 hover:bg-blue-700">
-          <Plus className="w-4 h-4" />
-          Nueva inversión
-        </Button>
-      </div>
 
-      {/* Portfolio summary */}
-      {loadingPortfolio ? (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {[...Array(4)].map((_, i) => <CardSkeleton key={i} />)}
-        </div>
-      ) : portfolio && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Card className="border-gray-100 shadow-sm">
-            <CardContent className="p-4">
-              <p className="text-xs text-gray-500 mb-1 font-medium">Total invertido</p>
-              <p className="text-xl font-bold text-gray-900">{formatCurrency(portfolio.totalInvested, user?.currency)}</p>
-            </CardContent>
-          </Card>
-          <Card className="border-gray-100 shadow-sm">
-            <CardContent className="p-4">
-              <p className="text-xs text-gray-500 mb-1 font-medium">Valor actual</p>
-              <p className="text-xl font-bold text-gray-900">{formatCurrency(portfolio.totalCurrentValue, user?.currency)}</p>
-            </CardContent>
-          </Card>
-          <Card className="border-gray-100 shadow-sm">
-            <CardContent className="p-4">
-              <p className="text-xs text-gray-500 mb-1 font-medium">Ganancia/Pérdida</p>
-              <p className={cn('text-xl font-bold', portfolio.totalProfit >= 0 ? 'text-emerald-600' : 'text-red-500')}>
-                {formatCurrency(portfolio.totalProfit, user?.currency)}
-              </p>
-            </CardContent>
-          </Card>
-          <Card className={cn('shadow-sm border-gray-100', portfolio.overallROI >= 0 ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200')}>
-            <CardContent className="p-4">
-              <p className={cn('text-xs mb-1 font-medium', portfolio.overallROI >= 0 ? 'text-emerald-600' : 'text-red-600')}>ROI Total</p>
-              <p className={cn('text-xl font-bold', portfolio.overallROI >= 0 ? 'text-emerald-700' : 'text-red-600')}>
-                {formatPercent(portfolio.overallROI)}
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+        {loadingPortfolio ? (
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            {[...Array(3)].map((_, i) => <CardSkeleton key={i} />)}
+          </div>
+        ) : portfolio && (
+          <div className="grid grid-cols-1 md:grid-cols-3 border border-rule rounded-md bg-paper-2/40 overflow-hidden">
+            <StatCell label="Invertido" value={formatCurrency(portfolio.totalInvested, user?.currency)} hint="capital colocado" />
+            <StatCell
+              label="Valor actual"
+              value={formatCurrency(portfolio.totalCurrentValue, user?.currency)}
+              hint={`${portfolio.totalInvestments} ${portfolio.totalInvestments === 1 ? 'activo' : 'activos'}`}
+              withLeftRule
+            />
+            <StatCell
+              label="Ganancia bruta"
+              value={`${overallPositive ? '+ ' : '− '}${formatCurrency(Math.abs(portfolio.totalProfit), user?.currency)}`}
+              hint={`ROI ${formatPercent(portfolio.overallROI)}`}
+              primary
+              positive={overallPositive}
+              withLeftRule
+            />
+          </div>
+        )}
 
-      {/* Form */}
-      {showForm && (
-        <Card className="border-blue-200 shadow-md">
-          <CardHeader className="flex flex-row items-center justify-between pb-3 border-b border-gray-100">
-            <CardTitle className="text-base font-semibold text-gray-900">
-              {editing ? 'Editar inversión' : 'Nueva inversión'}
-            </CardTitle>
-            <button onClick={cancelForm} className="p-1 rounded-lg hover:bg-gray-100 text-gray-400 transition-colors">
-              <X className="w-4 h-4" />
-            </button>
-          </CardHeader>
-          <CardContent className="pt-5">
-            <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label className="text-gray-700 font-medium">Tipo de inversión</Label>
+        {showForm && (
+          <section className="border border-ink rounded-md bg-paper-2/60 p-[22px]">
+            <div className="flex items-baseline justify-between mb-4">
+              <h2 className="font-serif italic font-medium text-[19px]">
+                {editing ? 'Editar posición' : 'Nueva posición'}
+              </h2>
+              <button onClick={cancelForm} className="text-sepia hover:text-ink transition-colors" aria-label="Cerrar">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-2 gap-5">
+              <div className="flex flex-col">
+                <span className="text-[10.5px] uppercase tracking-[0.14em] text-sepia font-semibold mb-1.5">Tipo</span>
                 <select
-                  className="flex h-9 w-full rounded-md border border-gray-200 bg-white px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-500"
+                  className="font-serif text-[17px] bg-transparent outline-none px-0 py-1.5 border-b border-rule focus:border-ink transition-colors text-ink"
                   {...register('type')}
                 >
                   {INVESTMENT_TYPES.map((t) => (
-                    <option key={t.value} value={t.value}>{t.label}</option>
+                    <option key={t.value} value={t.value} className="bg-paper text-ink">{t.label}</option>
                   ))}
                 </select>
-                {errors.type && <p className="text-xs text-red-500">{errors.type.message}</p>}
+                {errors.type && <p className="font-serif italic text-[12px] text-wine mt-1">{errors.type.message}</p>}
               </div>
-              <div className="col-span-2 space-y-1.5">
-                <Label className="text-gray-700 font-medium">Descripción</Label>
-                <Input placeholder="ej. Acciones de Apple Inc." {...register('description')} />
-                {errors.description && <p className="text-xs text-red-500">{errors.description.message}</p>}
+
+              <div className="col-span-1">
+                <Input label="Descripción" placeholder="ej. AAPL · Apple Inc." {...register('description')} />
+                {errors.description && <p className="font-serif italic text-[12px] text-wine mt-1">{errors.description.message}</p>}
               </div>
-              <div className="space-y-1.5">
-                <Label className="text-gray-700 font-medium">Capital inicial</Label>
-                <Input type="number" step="0.01" placeholder="0.00" {...register('initialCapital')} />
-                {errors.initialCapital && <p className="text-xs text-red-500">{errors.initialCapital.message}</p>}
+
+              <div>
+                <Input label="Capital inicial" type="number" step="0.01" placeholder="0.00" {...register('initialCapital')} />
+                {errors.initialCapital && <p className="font-serif italic text-[12px] text-wine mt-1">{errors.initialCapital.message}</p>}
               </div>
-              <div className="space-y-1.5">
-                <Label className="text-gray-700 font-medium">Capital actual</Label>
-                <Input type="number" step="0.01" placeholder="0.00" {...register('currentCapital')} />
-                {errors.currentCapital && <p className="text-xs text-red-500">{errors.currentCapital.message}</p>}
+
+              <div>
+                <Input label="Capital actual" type="number" step="0.01" placeholder="0.00" {...register('currentCapital')} />
+                {errors.currentCapital && <p className="font-serif italic text-[12px] text-wine mt-1">{errors.currentCapital.message}</p>}
               </div>
-              <div className="col-span-2 space-y-1.5">
-                <Label className="text-gray-700 font-medium">Notas (opcional)</Label>
-                <Input placeholder="Notas adicionales" {...register('notes')} />
+
+              <div className="col-span-2">
+                <Input label="Notas" placeholder="Detalles adicionales" {...register('notes')} />
               </div>
+
               {!editing && (
-                <div className="col-span-2 flex items-center gap-2 p-3 bg-blue-50 rounded-lg">
-                  <input type="checkbox" id="linked" {...register('createLinkedTransaction')} className="rounded accent-blue-600" />
-                  <label htmlFor="linked" className="text-sm text-blue-700 font-medium cursor-pointer">
-                    Crear transacción de gasto vinculada automáticamente
-                  </label>
-                </div>
+                <label className="col-span-2 flex items-center gap-3 text-[13px] font-serif italic text-sepia cursor-pointer">
+                  <input
+                    type="checkbox"
+                    {...register('createLinkedTransaction')}
+                    className="accent-gold"
+                  />
+                  Crear gasto vinculado en el cuaderno de cuentas
+                </label>
               )}
-              <div className="col-span-2 flex gap-2 pt-1">
-                <Button type="submit" disabled={isSubmitting} className="bg-blue-600 hover:bg-blue-700">
-                  {isSubmitting ? 'Guardando…' : editing ? 'Actualizar' : 'Crear'}
-                </Button>
-                <Button type="button" variant="outline" onClick={cancelForm}>Cancelar</Button>
+
+              <div className="col-span-2 flex items-center gap-3 pt-2">
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="inline-flex items-center gap-2 bg-ink text-paper rounded-pill px-[18px] py-[11px] text-[13.5px] font-semibold leading-none disabled:opacity-50"
+                >
+                  {isSubmitting ? 'Guardando…' : editing ? 'Actualizar' : 'Guardar ↵'}
+                </button>
+                <button
+                  type="button"
+                  onClick={cancelForm}
+                  className="font-serif italic text-sepia hover:text-ink transition-colors text-[14px]"
+                >
+                  Cancelar
+                </button>
               </div>
             </form>
-          </CardContent>
-        </Card>
-      )}
+          </section>
+        )}
 
-      {/* Investment list */}
-      {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {[...Array(4)].map((_, i) => <CardSkeleton key={i} />)}
-        </div>
-      ) : investments.length === 0 ? (
-        <Card className="border-gray-100 shadow-sm">
-          <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-            <Briefcase className="w-10 h-10 text-gray-200 mb-3" />
-            <p className="text-gray-500 font-medium">Sin inversiones todavía</p>
-            <p className="text-gray-400 text-sm mt-1">Agregá tu primera inversión para empezar a seguir tu portafolio</p>
-            <Button size="sm" className="mt-4 bg-blue-600 hover:bg-blue-700" onClick={() => { cancelForm(); setShowForm(true) }}>
-              <Plus className="w-3.5 h-3.5 mr-1" />
-              Nueva inversión
-            </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {investments.map((inv) => {
-            const profit = inv.currentCapital - inv.initialCapital
-            const positive = profit >= 0
-            const typeLabel = INVESTMENT_TYPES.find((t) => t.value === inv.type)?.label ?? inv.type
-            return (
-              <Card key={inv.id} className="border-gray-100 shadow-sm hover:shadow-md transition-shadow">
-                <CardContent className="p-5">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex-1 min-w-0">
-                      <Badge variant="secondary" className="mb-1.5 text-xs font-semibold">{typeLabel}</Badge>
-                      <p className="font-semibold text-gray-900 truncate">{inv.description}</p>
-                      {inv.notes && <p className="text-xs text-gray-400 mt-0.5 truncate">{inv.notes}</p>}
+        <section className="border border-rule rounded-md bg-paper-2/40">
+          <div className="grid grid-cols-[80px_1fr_100px_130px_130px_90px_70px] gap-3 px-[22px] py-3 border-b border-rule text-[10.5px] tracking-[0.16em] uppercase text-sepia font-semibold">
+            <span>Activo</span>
+            <span>Descripción</span>
+            <span className="text-right">30 d</span>
+            <span className="text-right">Invertido</span>
+            <span className="text-right">Actual</span>
+            <span className="text-right">ROI</span>
+            <span className="text-right">Peso</span>
+          </div>
+
+          {isLoading ? (
+            <div>
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="px-[22px] py-3.5 border-b border-rule-soft last:border-b-0">
+                  <div className="h-4 bg-sepia-soft animate-pulse rounded-sm" />
+                </div>
+              ))}
+            </div>
+          ) : investments.length === 0 ? (
+            <p className="font-serif italic text-sepia text-[15px] text-center py-12">
+              Aún no anotaste ninguna posición.
+            </p>
+          ) : (
+            investments.map((inv, i, arr) => {
+              const positive = inv.roi >= 0
+              const peso = totalCurrent > 0 ? (inv.currentCapital / totalCurrent) * 100 : 0
+              const typeLabel = INVESTMENT_TYPES.find((t) => t.value === inv.type)?.label ?? inv.type
+              const spark = syntheticSpark(inv.id, inv.roi)
+              return (
+                <div
+                  key={inv.id}
+                  className={cn(
+                    'group grid grid-cols-[80px_1fr_100px_130px_130px_90px_70px] gap-3 items-center px-[22px] py-3.5',
+                    i < arr.length - 1 && 'border-b border-rule-soft',
+                  )}
+                >
+                  <span className="font-serif text-[16px] font-medium text-gold tracking-tight truncate">
+                    {ticker(inv.description)}
+                  </span>
+                  <div className="min-w-0">
+                    <div className="font-serif text-[15px] truncate">{inv.description}</div>
+                    <div className="text-[11px] text-sepia mt-0.5 truncate">
+                      {typeLabel}
+                      {inv.notes && ` · ${inv.notes}`}
                     </div>
-                    <div className="flex gap-1 ml-2 flex-shrink-0">
-                      <button onClick={() => startEdit(inv)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors">
+                  </div>
+                  <div className="flex justify-end">
+                    <Sparkline data={spark} positive={positive} />
+                  </div>
+                  <span className="font-mono text-[12.5px] text-right text-ink">
+                    {new Intl.NumberFormat('es-AR').format(inv.initialCapital)}
+                  </span>
+                  <span className="font-mono text-[13px] text-right text-ink font-medium">
+                    {new Intl.NumberFormat('es-AR').format(inv.currentCapital)}
+                  </span>
+                  <span className={cn('font-serif italic text-[16px] text-right', positive ? 'text-sage' : 'text-wine')}>
+                    {formatPercent(inv.roi)}
+                  </span>
+                  <div className="flex items-center justify-end gap-2">
+                    <span className="font-mono text-[11.5px] text-sepia">{peso.toFixed(1)}%</span>
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button onClick={() => startEdit(inv)} className="text-sepia hover:text-ink transition-colors" aria-label="Editar">
                         <Pencil className="w-3.5 h-3.5" />
                       </button>
                       <button
-                        onClick={() => { if (window.confirm('¿Eliminar esta inversión?')) deleteMutation.mutate(inv.id) }}
-                        className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors"
+                        onClick={() => { if (window.confirm('¿Eliminar esta posición?')) deleteMutation.mutate(inv.id) }}
+                        className="text-sepia hover:text-wine transition-colors"
+                        aria-label="Eliminar"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   </div>
-                  <div className="grid grid-cols-3 gap-3 pt-3 border-t border-gray-100">
-                    <div>
-                      <p className="text-xs text-gray-400 mb-0.5">Invertido</p>
-                      <p className="text-sm font-semibold text-gray-900">{formatCurrency(inv.initialCapital, user?.currency)}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-400 mb-0.5">Actual</p>
-                      <p className="text-sm font-semibold text-gray-900">{formatCurrency(inv.currentCapital, user?.currency)}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-400 mb-0.5">P&L</p>
-                      <div className={cn('flex items-center gap-1 text-sm font-bold', positive ? 'text-emerald-600' : 'text-red-500')}>
-                        {positive ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
-                        {formatPercent(inv.roi)}
-                      </div>
-                    </div>
+                </div>
+              )
+            })
+          )}
+        </section>
+
+        {portfolio && portfolio.byType.length > 0 && (
+          <section className="border border-rule rounded-md bg-paper-2/40 p-[14px_22px]">
+            <div className="flex items-baseline justify-between mb-3 text-[11px] tracking-[0.16em] uppercase text-sepia font-semibold">
+              <span>Alocación por tipo</span>
+              <span className="font-serif italic normal-case tracking-normal text-[12px]">
+                Σ 100,0 %
+              </span>
+            </div>
+            <div className="flex h-1.5 rounded-sm overflow-hidden">
+              {portfolio.byType.map((b, i) => {
+                const peso = totalCurrent > 0 ? (b.totalCurrentCapital / totalCurrent) * 100 : 0
+                return (
+                  <div
+                    key={b.type}
+                    style={{ width: `${peso}%`, background: ALLOCATION_COLORS[i % ALLOCATION_COLORS.length] }}
+                  />
+                )
+              })}
+            </div>
+            <div className="flex flex-wrap gap-x-5 gap-y-2 mt-3">
+              {portfolio.byType.map((b, i) => {
+                const peso = totalCurrent > 0 ? (b.totalCurrentCapital / totalCurrent) * 100 : 0
+                const typeLabel = INVESTMENT_TYPES.find((t) => t.value === b.type)?.label ?? b.type
+                return (
+                  <div key={b.type} className="flex items-center gap-2 text-[12px]">
+                    <span
+                      className="w-2 h-2 rounded-sm flex-shrink-0"
+                      style={{ background: ALLOCATION_COLORS[i % ALLOCATION_COLORS.length] }}
+                    />
+                    <span className="font-serif">{typeLabel}</span>
+                    <span className="font-mono text-[11px] text-sepia">{peso.toFixed(1)}%</span>
                   </div>
-                </CardContent>
-              </Card>
-            )
-          })}
-        </div>
-      )}
+                )
+              })}
+            </div>
+          </section>
+        )}
+      </div>
     </div>
   )
+}
+
+const ALLOCATION_COLORS = [
+  'var(--color-gold)',
+  'var(--color-sage)',
+  'var(--color-sepia)',
+  'var(--color-wine)',
+  'rgba(199, 169, 116, 0.7)',
+  'rgba(158, 199, 156, 0.7)',
+  'rgba(210, 126, 126, 0.7)',
+  'rgba(212, 168, 90, 0.7)',
+]
+
+function StatCell({
+  label, value, hint, primary, positive, withLeftRule,
+}: {
+  label: string
+  value: string
+  hint?: string
+  primary?: boolean
+  positive?: boolean
+  withLeftRule?: boolean
+}) {
+  return (
+    <div
+      className={cn(
+        'p-[20px_24px]',
+        withLeftRule && 'md:border-l border-rule',
+        primary && 'bg-sage/[0.05]',
+      )}
+    >
+      <div className="text-[11px] tracking-[0.18em] uppercase text-sepia font-semibold">{label}</div>
+      <div
+        className={cn(
+          'font-serif font-normal mt-1.5 leading-none tracking-tight',
+          primary ? `text-[36px] ${positive ? 'text-sage' : 'text-wine'}` : 'text-[30px] text-ink',
+        )}
+      >
+        {value}
+      </div>
+      {hint && <div className="text-[11.5px] text-sepia mt-2">{hint}</div>}
+    </div>
+  )
+}
+
+function ticker(description: string) {
+  // Si la descripción empieza con un ticker en mayúscula (3-5 letras), lo usa.
+  // Si no, primera palabra en mayúscula con tope 5 chars.
+  const match = description.match(/^([A-Z]{2,5})\b/)
+  if (match) return match[1]
+  return description.split(/[\s·]/)[0]?.slice(0, 5).toUpperCase() ?? '·'
 }
