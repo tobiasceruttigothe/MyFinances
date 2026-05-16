@@ -12,6 +12,10 @@ import { formatCurrency, formatDate, formatPercent, cn } from '@/lib/utils'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine,
 } from 'recharts'
+import {
+  CHART_RULE, CHART_SAGE, CHART_SEPIA,
+  CHART_TICK_STYLE, CHART_GRID_PROPS, CHART_TOOLTIP_STYLE,
+} from '@/lib/chart-colors'
 import type { GoalStatus } from '@/types/goal'
 
 const contributionSchema = z.object({
@@ -213,37 +217,22 @@ export default function GoalDetailPage() {
           </div>
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={chartData}>
-              <CartesianGrid strokeDasharray="2 4" stroke="rgba(124, 90, 42, 0.18)" vertical={false} />
-              <XAxis
-                dataKey="name"
-                tick={{ fontSize: 11, fontFamily: 'JetBrains Mono', fill: '#7c5a2a' }}
-                axisLine={{ stroke: '#c9bca0' }}
-                tickLine={false}
-              />
-              <YAxis
-                tick={{ fontSize: 11, fontFamily: 'JetBrains Mono', fill: '#7c5a2a' }}
-                axisLine={false}
-                tickLine={false}
-              />
+              <CartesianGrid {...CHART_GRID_PROPS} />
+              <XAxis dataKey="name" tick={CHART_TICK_STYLE} axisLine={{ stroke: CHART_RULE }} tickLine={false} />
+              <YAxis tick={CHART_TICK_STYLE} axisLine={false} tickLine={false} />
               <Tooltip
                 formatter={(v) => formatCurrency(v as number, user?.currency)}
-                contentStyle={{
-                  borderRadius: '6px',
-                  border: '1px solid #c9bca0',
-                  fontSize: '12px',
-                  fontFamily: 'Newsreader, serif',
-                  background: '#f4ecdd',
-                }}
+                contentStyle={CHART_TOOLTIP_STYLE}
               />
               {stats?.monthlyTarget && (
                 <ReferenceLine
                   y={stats.monthlyTarget}
-                  stroke="#7c5a2a"
+                  stroke={CHART_SEPIA}
                   strokeDasharray="3 3"
                   strokeWidth={1}
                 />
               )}
-              <Bar dataKey="Contribuido" fill="#5e7a4f" radius={[2, 2, 0, 0]} />
+              <Bar dataKey="Contribuido" fill={CHART_SAGE} radius={[2, 2, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </section>

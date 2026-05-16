@@ -5,19 +5,13 @@ import { useAuthStore } from '@/stores/authStore'
 import { CardSkeleton } from '@/components/ui/skeleton'
 import { formatCurrency, formatPercent, cn } from '@/lib/utils'
 import {
+  CHART_COLORS, CHART_RULE, CHART_SAGE, CHART_WINE,
+  CHART_TICK_STYLE, CHART_GRID_PROPS, CHART_TOOLTIP_STYLE,
+} from '@/lib/chart-colors'
+import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   ResponsiveContainer, PieChart, Pie, Cell,
 } from 'recharts'
-
-const CUADERNO_COLORS = [
-  '#7c5a2a', // sepia
-  '#5e7a4f', // sage
-  '#9a3a2e', // wine
-  '#d4a657', // gold
-  'rgba(26, 22, 18, 0.6)',
-  'rgba(124, 90, 42, 0.6)',
-  'rgba(94, 122, 79, 0.7)',
-]
 
 const MONTHS = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -121,32 +115,21 @@ export default function ReportsPage() {
         {comparisonChartData.length > 0 ? (
           <ResponsiveContainer width="100%" height={260}>
             <BarChart data={comparisonChartData} margin={{ top: 4, right: 16, left: 16, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="2 4" stroke="rgba(124, 90, 42, 0.18)" vertical={false} />
-              <XAxis
-                dataKey="name"
-                tick={{ fontSize: 11, fontFamily: 'JetBrains Mono', fill: '#7c5a2a' }}
-                axisLine={{ stroke: '#c9bca0' }}
-                tickLine={false}
-              />
+              <CartesianGrid {...CHART_GRID_PROPS} />
+              <XAxis dataKey="name" tick={CHART_TICK_STYLE} axisLine={{ stroke: CHART_RULE }} tickLine={false} />
               <YAxis
-                tick={{ fontSize: 11, fontFamily: 'JetBrains Mono', fill: '#7c5a2a' }}
+                tick={CHART_TICK_STYLE}
                 tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`}
                 axisLine={false}
                 tickLine={false}
               />
               <Tooltip
                 formatter={(v) => formatCurrency(v as number, user?.currency)}
-                contentStyle={{
-                  borderRadius: '6px',
-                  border: '1px solid #c9bca0',
-                  fontSize: '12px',
-                  fontFamily: 'Newsreader, serif',
-                  background: '#f4ecdd',
-                }}
+                contentStyle={CHART_TOOLTIP_STYLE}
               />
               <Legend wrapperStyle={{ fontSize: 12, fontFamily: 'Newsreader, serif', fontStyle: 'italic' }} />
-              <Bar dataKey="Ingresos" fill="#5e7a4f" radius={[2, 2, 0, 0]} />
-              <Bar dataKey="Gastos" fill="#9a3a2e" radius={[2, 2, 0, 0]} />
+              <Bar dataKey="Ingresos" fill={CHART_SAGE} radius={[2, 2, 0, 0]} />
+              <Bar dataKey="Gastos" fill={CHART_WINE} radius={[2, 2, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         ) : (
@@ -165,18 +148,12 @@ export default function ReportsPage() {
                 <PieChart>
                   <Pie data={expensePieData} cx="50%" cy="50%" outerRadius={72} dataKey="value" paddingAngle={2}>
                     {expensePieData.map((_, i) => (
-                      <Cell key={i} fill={CUADERNO_COLORS[i % CUADERNO_COLORS.length]} />
+                      <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
                     ))}
                   </Pie>
                   <Tooltip
                     formatter={(v) => formatCurrency(v as number, user?.currency)}
-                    contentStyle={{
-                      borderRadius: '6px',
-                      border: '1px solid #c9bca0',
-                      fontSize: '12px',
-                      fontFamily: 'Newsreader, serif',
-                      background: '#f4ecdd',
-                    }}
+                    contentStyle={CHART_TOOLTIP_STYLE}
                   />
                 </PieChart>
               </ResponsiveContainer>
@@ -185,7 +162,7 @@ export default function ReportsPage() {
                   <div key={d.name} className="grid grid-cols-[14px_1fr_50px] gap-2 items-center">
                     <span
                       className="w-2.5 h-2.5 rounded-sm"
-                      style={{ background: CUADERNO_COLORS[i % CUADERNO_COLORS.length] }}
+                      style={{ background: CHART_COLORS[i % CHART_COLORS.length] }}
                     />
                     <span className="font-serif text-[13px] truncate">{d.name}</span>
                     <span className="font-mono text-[11.5px] text-sepia text-right">{formatPercent(d.pct)}</span>
@@ -217,7 +194,7 @@ export default function ReportsPage() {
                       className="h-full"
                       style={{
                         width: `${c.percentage}%`,
-                        background: CUADERNO_COLORS[i % CUADERNO_COLORS.length],
+                        background: CHART_COLORS[i % CHART_COLORS.length],
                       }}
                     />
                   </div>
