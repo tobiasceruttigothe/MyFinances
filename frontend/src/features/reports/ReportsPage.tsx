@@ -1,18 +1,23 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { BarChart2 } from 'lucide-react'
 import { reportsApi } from '@/api/reports'
 import { useAuthStore } from '@/stores/authStore'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { CardSkeleton } from '@/components/ui/skeleton'
-import { formatCurrency, formatPercent } from '@/lib/utils'
+import { formatCurrency, formatPercent, cn } from '@/lib/utils'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   ResponsiveContainer, PieChart, Pie, Cell,
 } from 'recharts'
-import { cn } from '@/lib/utils'
 
-const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6']
+const CUADERNO_COLORS = [
+  '#7c5a2a', // sepia
+  '#5e7a4f', // sage
+  '#9a3a2e', // wine
+  '#d4a657', // gold
+  'rgba(26, 22, 18, 0.6)',
+  'rgba(124, 90, 42, 0.6)',
+  'rgba(94, 122, 79, 0.7)',
+]
 
 const MONTHS = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -57,185 +62,215 @@ export default function ReportsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Reportes</h1>
-        <p className="text-gray-500 text-sm mt-0.5">Analizá tu comportamiento financiero</p>
+      <div className="flex items-baseline justify-between gap-4 flex-wrap">
+        <div>
+          <div className="text-[11px] tracking-[0.2em] uppercase text-sepia font-semibold">Reportes</div>
+          <h1 className="font-serif font-normal text-[36px] leading-[1.05] tracking-tight mt-1">
+            {MONTHS[month - 1]} <em className="text-sepia">en revisión.</em>
+          </h1>
+        </div>
+        <div className="flex items-baseline gap-3">
+          <select
+            className="font-serif text-[15px] bg-transparent outline-none border-b border-rule focus:border-ink transition-colors py-1 pr-2"
+            value={month}
+            onChange={(e) => setMonth(Number(e.target.value))}
+            aria-label="Mes"
+          >
+            {MONTHS.map((m, i) => (
+              <option key={i + 1} value={i + 1}>{m}</option>
+            ))}
+          </select>
+          <select
+            className="font-mono text-[14px] bg-transparent outline-none border-b border-rule focus:border-ink transition-colors py-1 pr-2"
+            value={year}
+            onChange={(e) => setYear(Number(e.target.value))}
+            aria-label="Año"
+          >
+            {[currentYear - 2, currentYear - 1, currentYear, currentYear + 1].map((y) => (
+              <option key={y} value={y}>{y}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
-      {/* Month selector */}
-      <Card className="border-gray-100 shadow-sm">
-        <CardContent className="flex items-center gap-4 p-4">
-          <div className="flex items-center gap-2">
-            <label className="text-sm font-medium text-gray-700">Mes</label>
-            <select
-              className="h-9 rounded-md border border-gray-200 bg-white px-3 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-              value={month}
-              onChange={(e) => setMonth(Number(e.target.value))}
-            >
-              {MONTHS.map((m, i) => (
-                <option key={i + 1} value={i + 1}>{m}</option>
-              ))}
-            </select>
-          </div>
-          <div className="flex items-center gap-2">
-            <label className="text-sm font-medium text-gray-700">Año</label>
-            <select
-              className="h-9 rounded-md border border-gray-200 bg-white px-3 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-              value={year}
-              onChange={(e) => setYear(Number(e.target.value))}
-            >
-              {[currentYear - 2, currentYear - 1, currentYear, currentYear + 1].map((y) => (
-                <option key={y} value={y}>{y}</option>
-              ))}
-            </select>
-          </div>
-          <p className="text-sm text-gray-400 ml-auto">
-            {MONTHS[month - 1]} {year}
-          </p>
-        </CardContent>
-      </Card>
-
-      {/* Monthly KPIs */}
       {loadingMonthly ? (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[...Array(4)].map((_, i) => <CardSkeleton key={i} />)}
         </div>
       ) : monthly ? (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Card className="border-emerald-200 bg-emerald-50 shadow-sm">
-            <CardContent className="p-4">
-              <p className="text-xs text-emerald-600 mb-1 font-medium">Ingresos</p>
-              <p className="text-xl font-bold text-emerald-700">{formatCurrency(monthly.totalIncome, user?.currency)}</p>
-            </CardContent>
-          </Card>
-          <Card className="border-red-200 bg-red-50 shadow-sm">
-            <CardContent className="p-4">
-              <p className="text-xs text-red-600 mb-1 font-medium">Gastos</p>
-              <p className="text-xl font-bold text-red-600">{formatCurrency(monthly.totalExpense, user?.currency)}</p>
-            </CardContent>
-          </Card>
-          <Card className="border-gray-100 shadow-sm">
-            <CardContent className="p-4">
-              <p className="text-xs text-gray-500 mb-1 font-medium">Balance</p>
-              <p className={cn('text-xl font-bold', monthly.balance >= 0 ? 'text-gray-900' : 'text-red-500')}>
-                {formatCurrency(monthly.balance, user?.currency)}
-              </p>
-            </CardContent>
-          </Card>
-          <Card className="border-blue-200 bg-blue-50 shadow-sm">
-            <CardContent className="p-4">
-              <p className="text-xs text-blue-600 mb-1 font-medium">Tasa de ahorro</p>
-              <p className="text-xl font-bold text-blue-700">{formatPercent(monthly.savingsRate)}</p>
-            </CardContent>
-          </Card>
+        <div className="grid grid-cols-2 md:grid-cols-4 border border-rule rounded-md bg-paper/40 backdrop-blur-[2px] overflow-hidden">
+          <KpiCell label="Ingresos" value={formatCurrency(monthly.totalIncome, user?.currency)} tone="sage" />
+          <KpiCell label="Gastos" value={formatCurrency(monthly.totalExpense, user?.currency)} tone="wine" withLeftRule />
+          <KpiCell
+            label="Balance"
+            value={formatCurrency(monthly.balance, user?.currency)}
+            tone={monthly.balance >= 0 ? 'ink' : 'wine'}
+            withLeftRule
+          />
+          <KpiCell
+            label="Tasa de ahorro"
+            value={formatPercent(monthly.savingsRate)}
+            tone="gold"
+            withLeftRule
+          />
         </div>
       ) : null}
 
-      {/* 6-month bar chart */}
-      <Card className="border-gray-100 shadow-sm">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base font-semibold text-gray-900">Ingresos vs Gastos (últimos 6 meses)</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {comparisonChartData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={comparisonChartData} margin={{ top: 4, right: 16, left: 16, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
-                <Tooltip
-                  formatter={(v) => formatCurrency(v as number, user?.currency)}
-                  contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb', fontSize: '12px' }}
-                />
-                <Legend />
-                <Bar dataKey="Ingresos" fill="#10b981" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="Gastos" fill="#ef4444" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <BarChart2 className="w-10 h-10 text-gray-200 mb-2" />
-              <p className="text-sm text-gray-400">Sin datos disponibles aún</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      <section className="border border-rule rounded-md bg-paper/40 backdrop-blur-[2px] p-[18px_22px]">
+        <SectionTitle title="Ingresos vs gastos · seis meses" />
+        {comparisonChartData.length > 0 ? (
+          <ResponsiveContainer width="100%" height={260}>
+            <BarChart data={comparisonChartData} margin={{ top: 4, right: 16, left: 16, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="2 4" stroke="rgba(124, 90, 42, 0.18)" vertical={false} />
+              <XAxis
+                dataKey="name"
+                tick={{ fontSize: 11, fontFamily: 'JetBrains Mono', fill: '#7c5a2a' }}
+                axisLine={{ stroke: '#c9bca0' }}
+                tickLine={false}
+              />
+              <YAxis
+                tick={{ fontSize: 11, fontFamily: 'JetBrains Mono', fill: '#7c5a2a' }}
+                tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`}
+                axisLine={false}
+                tickLine={false}
+              />
+              <Tooltip
+                formatter={(v) => formatCurrency(v as number, user?.currency)}
+                contentStyle={{
+                  borderRadius: '6px',
+                  border: '1px solid #c9bca0',
+                  fontSize: '12px',
+                  fontFamily: 'Newsreader, serif',
+                  background: '#f4ecdd',
+                }}
+              />
+              <Legend wrapperStyle={{ fontSize: 12, fontFamily: 'Newsreader, serif', fontStyle: 'italic' }} />
+              <Bar dataKey="Ingresos" fill="#5e7a4f" radius={[2, 2, 0, 0]} />
+              <Bar dataKey="Gastos" fill="#9a3a2e" radius={[2, 2, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        ) : (
+          <p className="font-serif italic text-sepia text-[15px] py-8 text-center">
+            Sin datos del semestre todavía.
+          </p>
+        )}
+      </section>
 
-      {/* Expense breakdown */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <Card className="border-gray-100 shadow-sm">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-semibold text-gray-900">Gastos por categoría este mes</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {expensePieData.length > 0 ? (
-              <div className="flex gap-4">
-                <ResponsiveContainer width={160} height={160}>
-                  <PieChart>
-                    <Pie data={expensePieData} cx="50%" cy="50%" outerRadius={72} dataKey="value" paddingAngle={2}>
-                      {expensePieData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                    </Pie>
-                    <Tooltip
-                      formatter={(v) => formatCurrency(v as number, user?.currency)}
-                      contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb', fontSize: '12px' }}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-[18px]">
+        <section className="border border-rule rounded-md bg-paper/40 backdrop-blur-[2px] p-[18px_22px]">
+          <SectionTitle title="Composición del gasto" right={MONTHS[month - 1]?.toUpperCase()} />
+          {expensePieData.length > 0 ? (
+            <div className="flex gap-5 items-center">
+              <ResponsiveContainer width={160} height={160}>
+                <PieChart>
+                  <Pie data={expensePieData} cx="50%" cy="50%" outerRadius={72} dataKey="value" paddingAngle={2}>
+                    {expensePieData.map((_, i) => (
+                      <Cell key={i} fill={CUADERNO_COLORS[i % CUADERNO_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    formatter={(v) => formatCurrency(v as number, user?.currency)}
+                    contentStyle={{
+                      borderRadius: '6px',
+                      border: '1px solid #c9bca0',
+                      fontSize: '12px',
+                      fontFamily: 'Newsreader, serif',
+                      background: '#f4ecdd',
+                    }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="flex-1 space-y-2">
+                {expensePieData.map((d, i) => (
+                  <div key={d.name} className="grid grid-cols-[14px_1fr_50px] gap-2 items-center">
+                    <span
+                      className="w-2.5 h-2.5 rounded-sm"
+                      style={{ background: CUADERNO_COLORS[i % CUADERNO_COLORS.length] }}
                     />
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className="flex-1 space-y-2">
-                  {expensePieData.map((d, i) => (
-                    <div key={i} className="flex items-center justify-between text-xs">
-                      <div className="flex items-center gap-1.5">
-                        <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
-                        <span className="text-gray-600 truncate max-w-[100px]">{d.name}</span>
-                      </div>
-                      <span className="text-gray-500 font-medium">{formatPercent(d.pct)}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-10 text-center">
-                <p className="text-sm text-gray-400">Sin gastos este mes</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="border-gray-100 shadow-sm">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-semibold text-gray-900">Desglose histórico de gastos</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {allExpenses && allExpenses.categories.length > 0 ? (
-              <div className="space-y-3.5">
-                {allExpenses.categories.slice(0, 6).map((c) => (
-                  <div key={c.categoryId}>
-                    <div className="flex justify-between text-xs mb-1.5">
-                      <span className="text-gray-700 font-medium">{c.categoryName}</span>
-                      <span className="text-gray-500">
-                        {formatCurrency(c.totalAmount, user?.currency)} · {formatPercent(c.percentage)}
-                      </span>
-                    </div>
-                    <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-gradient-to-r from-blue-500 to-blue-400 rounded-full"
-                        style={{ width: `${c.percentage}%` }}
-                      />
-                    </div>
+                    <span className="font-serif text-[13px] truncate">{d.name}</span>
+                    <span className="font-mono text-[11.5px] text-sepia text-right">{formatPercent(d.pct)}</span>
                   </div>
                 ))}
-                <p className="text-xs text-gray-400 mt-3 pt-2 border-t border-gray-100">
-                  Total histórico: <span className="font-semibold text-gray-600">{formatCurrency(allExpenses.grandTotal, user?.currency)}</span>
-                </p>
               </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-10 text-center">
-                <p className="text-sm text-gray-400">Sin datos históricos todavía</p>
+            </div>
+          ) : (
+            <p className="font-serif italic text-sepia text-[15px] py-8 text-center">
+              Sin gastos este mes.
+            </p>
+          )}
+        </section>
+
+        <section className="border border-rule rounded-md bg-paper/40 backdrop-blur-[2px] p-[18px_22px]">
+          <SectionTitle title="Desglose histórico" />
+          {allExpenses && allExpenses.categories.length > 0 ? (
+            <div className="space-y-3">
+              {allExpenses.categories.slice(0, 6).map((c, i) => (
+                <div key={c.categoryId}>
+                  <div className="flex items-baseline justify-between mb-1">
+                    <span className="font-serif text-[14px]">{c.categoryName}</span>
+                    <span className="font-mono text-[11.5px] text-sepia">
+                      {formatCurrency(c.totalAmount, user?.currency)} · {formatPercent(c.percentage)}
+                    </span>
+                  </div>
+                  <div className="h-1 bg-sepia-soft rounded-pill overflow-hidden">
+                    <div
+                      className="h-full"
+                      style={{
+                        width: `${c.percentage}%`,
+                        background: CUADERNO_COLORS[i % CUADERNO_COLORS.length],
+                      }}
+                    />
+                  </div>
+                </div>
+              ))}
+              <div className="flex items-baseline justify-between border-t border-dashed border-rule pt-3 mt-3">
+                <span className="text-[11px] uppercase tracking-[0.14em] text-sepia">Total histórico</span>
+                <span className="font-serif italic text-[16px]">
+                  {formatCurrency(allExpenses.grandTotal, user?.currency)}
+                </span>
               </div>
-            )}
-          </CardContent>
-        </Card>
+            </div>
+          ) : (
+            <p className="font-serif italic text-sepia text-[15px] py-8 text-center">
+              Aún no hay historia que contar.
+            </p>
+          )}
+        </section>
       </div>
+    </div>
+  )
+}
+
+const TONE: Record<string, string> = {
+  sage: 'text-sage',
+  wine: 'text-wine',
+  ink:  'text-ink',
+  gold: 'text-gold',
+}
+
+function KpiCell({
+  label, value, tone = 'ink', withLeftRule,
+}: {
+  label: string
+  value: string
+  tone?: 'sage' | 'wine' | 'ink' | 'gold'
+  withLeftRule?: boolean
+}) {
+  return (
+    <div className={cn('p-[18px_22px]', withLeftRule && 'md:border-l border-rule')}>
+      <div className="text-[11px] tracking-[0.18em] uppercase text-sepia font-semibold">{label}</div>
+      <div className={cn('font-serif font-normal text-[26px] mt-1.5 leading-none tracking-tight', TONE[tone])}>
+        {value}
+      </div>
+    </div>
+  )
+}
+
+function SectionTitle({ title, right }: { title: string; right?: string }) {
+  return (
+    <div className="flex items-baseline justify-between mb-3.5">
+      <h2 className="font-serif italic font-medium text-[19px]">{title}</h2>
+      {right && <span className="text-[11px] tracking-[0.14em] uppercase text-sepia">{right}</span>}
     </div>
   )
 }
