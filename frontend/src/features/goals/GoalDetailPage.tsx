@@ -1,21 +1,18 @@
-import { useParams, useNavigate } from 'react-router-dom'
+import { Link, useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { ArrowLeft, Plus, Target } from 'lucide-react'
 import { goalsApi } from '@/api/goals'
 import { useAuthStore } from '@/stores/authStore'
 import { useToast } from '@/components/ui/toast'
-import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { formatCurrency, formatDate, formatPercent } from '@/lib/utils'
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts'
-import { cn } from '@/lib/utils'
+import { formatCurrency, formatDate, formatPercent, cn } from '@/lib/utils'
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine,
+} from 'recharts'
+import type { GoalStatus } from '@/types/goal'
 
 const contributionSchema = z.object({
   amount: z.coerce.number().positive('Debe ser mayor a 0'),
@@ -23,11 +20,11 @@ const contributionSchema = z.object({
 })
 type ContributionForm = z.infer<typeof contributionSchema>
 
-const STATUS_CONFIG: Record<string, { label: string; variant: 'default' | 'success' | 'warning' | 'secondary' | 'destructive'; bar: string }> = {
-  IN_PROGRESS: { label: 'En progreso', variant: 'default', bar: 'bg-blue-500' },
-  COMPLETED: { label: 'Completada', variant: 'success', bar: 'bg-emerald-500' },
-  ON_HOLD: { label: 'En pausa', variant: 'warning', bar: 'bg-amber-500' },
-  CANCELED: { label: 'Cancelada', variant: 'destructive', bar: 'bg-red-500' },
+const STATUS_LABELS: Record<GoalStatus, string> = {
+  IN_PROGRESS: 'En progreso',
+  COMPLETED:   'Completada',
+  ON_HOLD:     'En pausa',
+  CANCELED:    'Cancelada',
 }
 
 export default function GoalDetailPage() {
@@ -53,9 +50,8 @@ export default function GoalDetailPage() {
     queryFn: () => goalsApi.getContributions(goalId),
   })
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<ContributionForm>({
-    resolver: zodResolver(contributionSchema) as any,
+    resolver: zodResolver(contributionSchema) as never,
   })
 
   const addContribution = useMutation({
@@ -75,200 +71,221 @@ export default function GoalDetailPage() {
   if (loadingGoal) {
     return (
       <div className="space-y-6 max-w-4xl">
-        <div className="flex items-center gap-3">
-          <button onClick={() => navigate(-1)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500">
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <Skeleton className="h-8 w-64" />
-        </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-20 rounded-xl" />)}
-        </div>
+        <Skeleton className="h-6 w-40" />
+        <Skeleton className="h-20 w-full" />
+        <Skeleton className="h-48 w-full" />
       </div>
     )
   }
 
   if (!goal) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 text-center">
-        <Target className="w-12 h-12 text-gray-200 mb-3" />
-        <p className="text-gray-500 font-medium">Meta no encontrada</p>
-        <button onClick={() => navigate(-1)} className="mt-4 text-sm text-blue-500 hover:underline">
+      <div className="text-center py-20">
+        <p className="font-serif italic text-sepia text-[18px]">Meta no encontrada.</p>
+        <button onClick={() => navigate(-1)} className="mt-4 font-serif italic text-sepia hover:text-ink underline underline-offset-[3px]">
           Volver
         </button>
       </div>
     )
   }
 
-  const cfg = STATUS_CONFIG[goal.status] ?? STATUS_CONFIG['IN_PROGRESS']
+  const remaining = goal.remainingAmount
+  const near = goal.progressPercentage >= 80
 
   const chartData = stats?.monthlyBreakdown.slice(-6).map((m) => ({
     name: m.monthLabel.slice(0, 3),
     Contribuido: m.contributed,
-    Objetivo: m.monthlyTarget,
   })) ?? []
 
   return (
     <div className="space-y-6 max-w-4xl">
-      <div className="flex items-center gap-3">
-        <button
-          onClick={() => navigate(-1)}
-          className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors"
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-        <h1 className="text-2xl font-bold text-gray-900">
-          {goal.icon ?? '🎯'} {goal.name}
-        </h1>
-        <Badge variant={cfg.variant}>{cfg.label}</Badge>
+      <div className="text-[11.5px] text-sepia tracking-wide">
+        <Link to="/goals" className="hover:text-ink underline underline-offset-[3px]">← Metas</Link>
+        <span> · {STATUS_LABELS[goal.status]}</span>
       </div>
 
-      {/* Progress overview */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="border-blue-200 bg-blue-50 shadow-sm">
-          <CardContent className="p-4">
-            <p className="text-xs text-blue-600 mb-1 font-medium">Ahorrado</p>
-            <p className="text-xl font-bold text-blue-700">{formatCurrency(goal.currentAmount, user?.currency)}</p>
-          </CardContent>
-        </Card>
-        <Card className="border-gray-100 shadow-sm">
-          <CardContent className="p-4">
-            <p className="text-xs text-gray-500 mb-1 font-medium">Objetivo</p>
-            <p className="text-xl font-bold text-gray-900">{formatCurrency(goal.targetAmount, user?.currency)}</p>
-          </CardContent>
-        </Card>
-        <Card className="border-emerald-200 bg-emerald-50 shadow-sm">
-          <CardContent className="p-4">
-            <p className="text-xs text-emerald-600 mb-1 font-medium">Progreso</p>
-            <p className="text-xl font-bold text-emerald-700">{formatPercent(goal.progressPercentage)}</p>
-          </CardContent>
-        </Card>
-        <Card className="border-gray-100 shadow-sm">
-          <CardContent className="p-4">
-            <p className="text-xs text-gray-500 mb-1 font-medium">Faltante</p>
-            <p className="text-xl font-bold text-gray-700">{formatCurrency(goal.remainingAmount, user?.currency)}</p>
-          </CardContent>
-        </Card>
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div className="flex items-start gap-5">
+          <div className="w-20 h-20 rounded-lg bg-sepia-soft flex items-center justify-center text-[44px] text-ink flex-shrink-0">
+            {goal.icon ?? '◇'}
+          </div>
+          <div>
+            <div className="text-[11px] tracking-[0.2em] uppercase text-sepia font-semibold">
+              Meta · {STATUS_LABELS[goal.status]}
+            </div>
+            <h1 className="font-serif font-normal text-[36px] leading-[1.05] tracking-tight mt-1">
+              {goal.name}
+            </h1>
+            {goal.description && (
+              <p className="font-serif italic text-[13px] text-sepia mt-1.5 max-w-md">
+                «{goal.description}»
+              </p>
+            )}
+          </div>
+        </div>
       </div>
 
-      {/* Progress bar */}
-      <Card className="border-gray-100 shadow-sm">
-        <CardContent className="p-5">
-          <div className="flex justify-between text-sm mb-3 text-gray-600">
-            <span className="font-medium">{formatCurrency(goal.currentAmount, user?.currency)}</span>
-            <span className="font-semibold text-gray-900">{formatPercent(goal.progressPercentage)} completado</span>
-            <span className="font-medium">{formatCurrency(goal.targetAmount, user?.currency)}</span>
+      <section className="border border-rule rounded-md bg-paper/40 backdrop-blur-[2px] p-[22px_26px]">
+        <div className="flex items-end justify-between mb-3.5 gap-4 flex-wrap">
+          <div>
+            <div className="text-[11px] tracking-[0.16em] uppercase text-sepia font-semibold">
+              Ahorrado de {formatCurrency(goal.targetAmount, user?.currency)}
+            </div>
+            <div className="font-serif text-[44px] tracking-tight leading-none mt-1">
+              {formatCurrency(goal.currentAmount, user?.currency)}
+            </div>
           </div>
-          <div className="w-full h-5 bg-gray-100 rounded-full overflow-hidden">
-            <div
-              className={cn('h-full rounded-full transition-all duration-700', cfg.bar)}
-              style={{ width: `${Math.min(goal.progressPercentage, 100)}%` }}
-            />
+          <div className="text-right">
+            <div className={cn('font-serif italic text-[32px] leading-none', near ? 'text-sage' : 'text-ink')}>
+              {formatPercent(goal.progressPercentage)}
+            </div>
+            <div className="font-serif italic text-[11.5px] text-sepia mt-1">
+              faltan {formatCurrency(remaining, user?.currency)}
+            </div>
           </div>
-          {goal.targetDate && (
-            <p className="text-xs text-gray-400 mt-2.5">Fecha objetivo: {formatDate(goal.targetDate)}</p>
-          )}
-        </CardContent>
-      </Card>
+        </div>
+        <div className="h-2.5 bg-sepia-soft rounded-pill overflow-hidden">
+          <div
+            className={cn('h-full transition-all duration-700', near ? 'bg-sage' : 'bg-ink')}
+            style={{ width: `${Math.min(goal.progressPercentage, 100)}%` }}
+          />
+        </div>
+        <div className="grid grid-cols-3 mt-5 pt-3.5 border-t border-dashed border-rule">
+          <Mini label="Aporte mensual" value={goal.monthlyTargetAmount ? formatCurrency(goal.monthlyTargetAmount, user?.currency) : '—'} />
+          <Mini label="Fecha objetivo" value={goal.targetDate ? formatDate(goal.targetDate) : '—'} withLeftRule />
+          <Mini label="Aportes hechos" value={`${contributions.length} ${contributions.length === 1 ? 'vez' : 'veces'}`} withLeftRule />
+        </div>
+      </section>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Add contribution */}
-        <Card className="border-gray-100 shadow-sm">
-          <CardHeader className="pb-3 border-b border-gray-100">
-            <CardTitle className="text-base font-semibold text-gray-900">Agregar contribución</CardTitle>
-          </CardHeader>
-          <CardContent className="pt-4">
-            <form onSubmit={handleSubmit((d) => addContribution.mutate(d))} className="space-y-3">
-              <div className="space-y-1.5">
-                <Label className="text-gray-700 font-medium">Monto</Label>
-                <Input type="number" step="0.01" placeholder="500.00" className="bg-white border-gray-200" {...register('amount')} />
-                {errors.amount && <p className="text-xs text-red-500">{errors.amount.message}</p>}
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-gray-700 font-medium">Notas (opcional)</Label>
-                <Input placeholder="ej. Ahorrado del sueldo de marzo" className="bg-white border-gray-200" {...register('notes')} />
-              </div>
-              <Button type="submit" size="sm" disabled={isSubmitting} className="bg-blue-600 hover:bg-blue-700 gap-1.5">
-                <Plus className="w-3.5 h-3.5" />
-                {isSubmitting ? 'Agregando…' : 'Agregar'}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-[18px]">
+        <section className="border border-rule rounded-md bg-paper/40 backdrop-blur-[2px] p-[22px]">
+          <h2 className="font-serif italic font-medium text-[19px] mb-4">Agregar contribución</h2>
+          <form onSubmit={handleSubmit((d) => addContribution.mutate(d))} className="space-y-4">
+            <div>
+              <Input label="Monto" type="number" step="0.01" placeholder="500.00" {...register('amount')} />
+              {errors.amount && <p className="font-serif italic text-[12px] text-wine mt-1">{errors.amount.message}</p>}
+            </div>
+            <div>
+              <Input label="Notas" placeholder="ej. Sueldo de marzo" {...register('notes')} />
+            </div>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="inline-flex items-center gap-2 bg-ink text-paper rounded-pill px-[18px] py-[11px] text-[13.5px] font-semibold leading-none disabled:opacity-50"
+            >
+              <span className="text-base leading-none">+</span>
+              {isSubmitting ? 'Agregando…' : 'Aporte'}
+            </button>
+          </form>
+        </section>
 
-        {/* Stats */}
         {stats && (
-          <Card className="border-gray-100 shadow-sm">
-            <CardHeader className="pb-3 border-b border-gray-100">
-              <CardTitle className="text-base font-semibold text-gray-900">Estadísticas</CardTitle>
-            </CardHeader>
-            <CardContent className="pt-4 space-y-3">
+          <section className="border border-rule rounded-md bg-paper/40 backdrop-blur-[2px] p-[22px]">
+            <h2 className="font-serif italic font-medium text-[19px] mb-4">Estadísticas</h2>
+            <div className="space-y-2">
               {[
                 { label: 'Promedio mensual', value: formatCurrency(stats.averageMonthlyContribution, user?.currency) },
-                { label: 'Meses con contribuciones', value: stats.monthsWithContributions.toString() },
+                { label: 'Meses con aportes', value: stats.monthsWithContributions.toString() },
                 { label: 'Meses con objetivo cumplido', value: stats.monthsWithFullTarget.toString() },
-                ...(stats.bestMonthLabel ? [{ label: 'Mejor mes', value: `${stats.bestMonthLabel} (${formatCurrency(stats.bestMonthAmount, user?.currency)})` }] : []),
+                ...(stats.bestMonthLabel
+                  ? [{ label: 'Mejor mes', value: `${stats.bestMonthLabel} · ${formatCurrency(stats.bestMonthAmount, user?.currency)}` }]
+                  : []),
               ].map(({ label, value }) => (
-                <div key={label} className="flex items-center justify-between text-sm">
-                  <span className="text-gray-500">{label}</span>
-                  <span className="font-semibold text-gray-900">{value}</span>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        )}
-      </div>
-
-      {/* Monthly chart */}
-      {chartData.length > 0 && (
-        <Card className="border-gray-100 shadow-sm">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base font-semibold text-gray-900">Contribuciones mensuales (últimos 6 meses)</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={200}>
-              <BarChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                <YAxis tick={{ fontSize: 12 }} />
-                <Tooltip
-                  formatter={(v) => formatCurrency(v as number, user?.currency)}
-                  contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb', fontSize: '12px' }}
-                />
-                {stats?.monthlyTarget && (
-                  <ReferenceLine y={stats.monthlyTarget} stroke="#3b82f6" strokeDasharray="4 2" label={{ value: 'Objetivo', fontSize: 11, fill: '#3b82f6' }} />
-                )}
-                <Bar dataKey="Contribuido" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Contribution history */}
-      {contributions.length > 0 && (
-        <Card className="border-gray-100 shadow-sm">
-          <CardHeader className="pb-3 border-b border-gray-100">
-            <CardTitle className="text-base font-semibold text-gray-900">Historial de contribuciones</CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="divide-y divide-gray-50">
-              {contributions.slice().reverse().map((c) => (
-                <div key={c.id} className="flex items-center justify-between px-5 py-3.5">
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">{formatDate(c.contributionDate)}</p>
-                    {c.notes && <p className="text-xs text-gray-400 mt-0.5">{c.notes}</p>}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="secondary" className="text-xs">{c.type}</Badge>
-                    <span className="text-sm font-bold text-emerald-600">+{formatCurrency(c.amount, user?.currency)}</span>
-                  </div>
+                <div key={label} className="flex items-baseline justify-between border-b border-rule-soft pb-1.5 last:border-b-0">
+                  <span className="text-[12px] text-sepia">{label}</span>
+                  <span className="font-serif italic text-[14px]">{value}</span>
                 </div>
               ))}
             </div>
-          </CardContent>
-        </Card>
+          </section>
+        )}
+      </div>
+
+      {chartData.length > 0 && (
+        <section className="border border-rule rounded-md bg-paper/40 backdrop-blur-[2px] p-[22px]">
+          <div className="flex items-baseline justify-between mb-3.5">
+            <h2 className="font-serif italic font-medium text-[19px]">Trayectoria · últimos 6 meses</h2>
+            {stats?.monthlyTarget && (
+              <span className="text-[11px] text-sepia tracking-[0.14em] uppercase">
+                Obj. {formatCurrency(stats.monthlyTarget, user?.currency)}
+              </span>
+            )}
+          </div>
+          <ResponsiveContainer width="100%" height={200}>
+            <BarChart data={chartData}>
+              <CartesianGrid strokeDasharray="2 4" stroke="rgba(124, 90, 42, 0.18)" vertical={false} />
+              <XAxis
+                dataKey="name"
+                tick={{ fontSize: 11, fontFamily: 'JetBrains Mono', fill: '#7c5a2a' }}
+                axisLine={{ stroke: '#c9bca0' }}
+                tickLine={false}
+              />
+              <YAxis
+                tick={{ fontSize: 11, fontFamily: 'JetBrains Mono', fill: '#7c5a2a' }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <Tooltip
+                formatter={(v) => formatCurrency(v as number, user?.currency)}
+                contentStyle={{
+                  borderRadius: '6px',
+                  border: '1px solid #c9bca0',
+                  fontSize: '12px',
+                  fontFamily: 'Newsreader, serif',
+                  background: '#f4ecdd',
+                }}
+              />
+              {stats?.monthlyTarget && (
+                <ReferenceLine
+                  y={stats.monthlyTarget}
+                  stroke="#7c5a2a"
+                  strokeDasharray="3 3"
+                  strokeWidth={1}
+                />
+              )}
+              <Bar dataKey="Contribuido" fill="#5e7a4f" radius={[2, 2, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </section>
       )}
+
+      {contributions.length > 0 && (
+        <section className="border border-rule rounded-md bg-paper/40 backdrop-blur-[2px]">
+          <div className="flex items-baseline justify-between px-[22px] py-3.5 border-b border-rule">
+            <h2 className="font-serif italic font-medium text-[19px]">Aportes</h2>
+            <span className="text-[11.5px] text-sepia">{contributions.length}</span>
+          </div>
+          <div>
+            {contributions.slice().reverse().map((c, i, arr) => (
+              <div
+                key={c.id}
+                className={cn(
+                  'grid grid-cols-[90px_1fr_120px] gap-3 items-center px-[22px] py-2.5',
+                  i < arr.length - 1 && 'border-b border-rule-soft',
+                )}
+              >
+                <span className="font-mono text-[11.5px] text-sepia">{formatDate(c.contributionDate)}</span>
+                <div>
+                  <span className="font-serif text-[14px]">{c.notes ?? '—'}</span>
+                  <span className="ml-2 text-[10.5px] uppercase tracking-[0.12em] text-sepia">{c.type}</span>
+                </div>
+                <span className="font-serif italic text-[16px] text-sage text-right">
+                  + {formatCurrency(c.amount, user?.currency)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+    </div>
+  )
+}
+
+function Mini({ label, value, withLeftRule }: { label: string; value: string; withLeftRule?: boolean }) {
+  return (
+    <div className={cn('px-0', withLeftRule && 'border-l border-rule-soft pl-5')}>
+      <div className="text-[11px] tracking-[0.14em] uppercase text-sepia">{label}</div>
+      <div className="font-serif italic text-[18px] mt-1">{value}</div>
     </div>
   )
 }

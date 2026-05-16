@@ -4,18 +4,13 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Link } from 'react-router-dom'
-import { Plus, Trash2, ChevronRight, X, Target } from 'lucide-react'
+import { X, Trash2 } from 'lucide-react'
 import { goalsApi } from '@/api/goals'
 import { useAuthStore } from '@/stores/authStore'
 import { useToast } from '@/components/ui/toast'
 import type { CreateGoalRequest, GoalStatus } from '@/types/goal'
-import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { formatCurrency } from '@/lib/utils'
-import { cn } from '@/lib/utils'
+import { formatCurrency, cn } from '@/lib/utils'
 
 const schema = z.object({
   name: z.string().min(1, 'Requerido').max(100),
@@ -29,11 +24,11 @@ const schema = z.object({
 })
 type FormData = z.infer<typeof schema>
 
-const STATUS_CONFIG: Record<GoalStatus, { label: string; variant: 'default' | 'success' | 'warning' | 'secondary' | 'destructive'; color: string }> = {
-  IN_PROGRESS: { label: 'En progreso', variant: 'default', color: 'bg-blue-500' },
-  COMPLETED: { label: 'Completada', variant: 'success', color: 'bg-emerald-500' },
-  ON_HOLD: { label: 'En pausa', variant: 'warning', color: 'bg-amber-500' },
-  CANCELED: { label: 'Cancelada', variant: 'destructive', color: 'bg-red-500' },
+const STATUS_LABELS: Record<GoalStatus, string> = {
+  IN_PROGRESS: 'En progreso',
+  COMPLETED:   'Completadas',
+  ON_HOLD:     'En pausa',
+  CANCELED:    'Canceladas',
 }
 
 export default function GoalsPage() {
@@ -48,9 +43,8 @@ export default function GoalsPage() {
     queryFn: goalsApi.getAll,
   })
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<FormData>({
-    resolver: zodResolver(schema) as any,
+    resolver: zodResolver(schema) as never,
     defaultValues: { autoContribution: false },
   })
 
@@ -74,7 +68,6 @@ export default function GoalsPage() {
   })
 
   function cancelForm() { setShowForm(false); reset() }
-
   async function onSubmit(data: FormData) {
     await createMutation.mutateAsync(data as CreateGoalRequest)
   }
@@ -86,163 +79,217 @@ export default function GoalsPage() {
     return acc
   }, {} as Record<string, number>)
 
+  const totalSaved = goals.reduce((s, g) => s + g.currentAmount, 0)
+  const totalTarget = goals.reduce((s, g) => s + g.targetAmount, 0)
+  const combinedPct = totalTarget > 0 ? (totalSaved / totalTarget) * 100 : 0
+  const nextToFinish = [...goals]
+    .filter((g) => g.status === 'IN_PROGRESS')
+    .sort((a, b) => b.progressPercentage - a.progressPercentage)[0]
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-baseline justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Metas de ahorro</h1>
-          <p className="text-gray-500 text-sm mt-0.5">Definí tus objetivos y seguí tu progreso</p>
+          <div className="text-[11px] tracking-[0.2em] uppercase text-sepia font-semibold">
+            Metas · {statusCounts.IN_PROGRESS ?? 0} activas
+          </div>
+          <h1 className="font-serif font-normal text-[36px] leading-[1.05] tracking-tight mt-1">
+            Tus <em className="text-sepia">propósitos.</em>
+          </h1>
         </div>
-        <Button size="sm" onClick={() => { cancelForm(); setShowForm(true) }} className="gap-2 bg-blue-600 hover:bg-blue-700">
-          <Plus className="w-4 h-4" />
-          Nueva meta
-        </Button>
+        <button
+          onClick={() => { cancelForm(); setShowForm(true) }}
+          className="inline-flex items-center gap-2 bg-ink text-paper rounded-pill px-[18px] py-[11px] text-[13.5px] font-semibold leading-none"
+        >
+          <span className="text-base leading-none">+</span> Nueva meta
+        </button>
       </div>
 
       {showForm && (
-        <Card className="border-blue-200 shadow-md">
-          <CardHeader className="flex flex-row items-center justify-between pb-3 border-b border-gray-100">
-            <CardTitle className="text-base font-semibold text-gray-900">Nueva meta</CardTitle>
-            <button onClick={cancelForm} className="p-1 rounded-lg hover:bg-gray-100 text-gray-400 transition-colors">
+        <section className="border border-ink rounded-md bg-paper/60 backdrop-blur-[2px] p-[22px]">
+          <div className="flex items-baseline justify-between mb-4">
+            <h2 className="font-serif italic font-medium text-[19px]">Nueva meta</h2>
+            <button onClick={cancelForm} className="text-sepia hover:text-ink transition-colors" aria-label="Cerrar">
               <X className="w-4 h-4" />
             </button>
-          </CardHeader>
-          <CardContent className="pt-5">
-            <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-2 gap-4">
-              <div className="col-span-2 grid grid-cols-5 gap-3">
-                <div className="col-span-1 space-y-1.5">
-                  <Label className="text-gray-700 font-medium">Ícono</Label>
-                  <Input placeholder="🎯" {...register('icon')} />
-                </div>
-                <div className="col-span-4 space-y-1.5">
-                  <Label className="text-gray-700 font-medium">Nombre</Label>
-                  <Input placeholder="ej. Fondo de vacaciones" {...register('name')} />
-                  {errors.name && <p className="text-xs text-red-500">{errors.name.message}</p>}
-                </div>
+          </div>
+          <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-2 gap-5">
+            <div className="col-span-2 grid grid-cols-[80px_1fr] gap-4">
+              <Input label="Ícono" placeholder="◇" {...register('icon')} />
+              <div>
+                <Input label="Nombre" placeholder="ej. Fondo de vacaciones" {...register('name')} />
+                {errors.name && <p className="font-serif italic text-[12px] text-wine mt-1">{errors.name.message}</p>}
               </div>
-              <div className="col-span-2 space-y-1.5">
-                <Label className="text-gray-700 font-medium">Descripción (opcional)</Label>
-                <Input placeholder="Descripción breve" {...register('description')} />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-gray-700 font-medium">Monto objetivo</Label>
-                <Input type="number" step="0.01" placeholder="5000" {...register('targetAmount')} />
-                {errors.targetAmount && <p className="text-xs text-red-500">{errors.targetAmount.message}</p>}
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-gray-700 font-medium">Meta mensual (opcional)</Label>
-                <Input type="number" step="0.01" placeholder="500" {...register('monthlyTargetAmount')} />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-gray-700 font-medium">Fecha de inicio</Label>
-                <Input type="date" {...register('startDate')} />
-                {errors.startDate && <p className="text-xs text-red-500">{errors.startDate.message}</p>}
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-gray-700 font-medium">Fecha objetivo (opcional)</Label>
-                <Input type="date" {...register('targetDate')} />
-              </div>
-              <div className="col-span-2 flex gap-2 pt-1">
-                <Button type="submit" disabled={isSubmitting} className="bg-blue-600 hover:bg-blue-700">
-                  {isSubmitting ? 'Creando…' : 'Crear meta'}
-                </Button>
-                <Button type="button" variant="outline" onClick={cancelForm}>Cancelar</Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
+            </div>
+            <div className="col-span-2">
+              <Input label="Descripción" placeholder="Detalle breve" {...register('description')} />
+            </div>
+            <div>
+              <Input label="Monto objetivo" type="number" step="0.01" placeholder="5000" {...register('targetAmount')} />
+              {errors.targetAmount && <p className="font-serif italic text-[12px] text-wine mt-1">{errors.targetAmount.message}</p>}
+            </div>
+            <div>
+              <Input label="Meta mensual" type="number" step="0.01" placeholder="500" {...register('monthlyTargetAmount')} />
+            </div>
+            <div>
+              <Input label="Fecha de inicio" type="date" {...register('startDate')} />
+              {errors.startDate && <p className="font-serif italic text-[12px] text-wine mt-1">{errors.startDate.message}</p>}
+            </div>
+            <div>
+              <Input label="Fecha objetivo" type="date" {...register('targetDate')} />
+            </div>
+            <div className="col-span-2 flex items-center gap-3 pt-2">
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="inline-flex items-center gap-2 bg-ink text-paper rounded-pill px-[18px] py-[11px] text-[13.5px] font-semibold leading-none disabled:opacity-50"
+              >
+                {isSubmitting ? 'Creando…' : 'Guardar ↵'}
+              </button>
+              <button
+                type="button"
+                onClick={cancelForm}
+                className="font-serif italic text-sepia hover:text-ink transition-colors text-[14px]"
+              >
+                Cancelar
+              </button>
+            </div>
+          </form>
+        </section>
       )}
 
-      {/* Status filter */}
-      <div className="flex items-center gap-2 flex-wrap">
-        <div className="flex gap-1.5 p-1 bg-gray-100 rounded-lg">
-          <button
-            onClick={() => setStatusFilter('ALL')}
-            className={cn('px-3 py-1.5 rounded-md text-xs font-semibold transition-all', statusFilter === 'ALL' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700')}
-          >
-            Todas ({goals.length})
-          </button>
-          {(Object.entries(STATUS_CONFIG) as [GoalStatus, typeof STATUS_CONFIG[GoalStatus]][]).map(([s, cfg]) => (
-            statusCounts[s] ? (
-              <button
-                key={s}
-                onClick={() => setStatusFilter(s)}
-                className={cn('px-3 py-1.5 rounded-md text-xs font-semibold transition-all', statusFilter === s ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700')}
-              >
-                {cfg.label} ({statusCounts[s]})
-              </button>
-            ) : null
-          ))}
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 border border-rule rounded-md bg-paper/40 backdrop-blur-[2px] overflow-hidden">
+        <SummaryCell label="Total ahorrado" value={formatCurrency(totalSaved, user?.currency)} hint="entre todas las metas" />
+        <SummaryCell
+          label="Objetivo combinado"
+          value={formatCurrency(totalTarget, user?.currency)}
+          hint={`${combinedPct.toFixed(0)} % alcanzado`}
+          withLeftRule
+        />
+        <SummaryCell
+          label="Próxima en cumplir"
+          value={nextToFinish?.name ?? '—'}
+          hint={nextToFinish ? `${nextToFinish.progressPercentage.toFixed(0)} % completada` : 'sin metas activas'}
+          primary
+          withLeftRule
+        />
+      </div>
+
+      <div className="flex items-baseline gap-0 border-b border-rule">
+        {(['ALL', 'IN_PROGRESS', 'COMPLETED', 'ON_HOLD', 'CANCELED'] as const).map((key) => {
+          const count = key === 'ALL' ? goals.length : statusCounts[key] ?? 0
+          if (key !== 'ALL' && count === 0) return null
+          const active = statusFilter === key
+          const label = key === 'ALL' ? 'Todas' : STATUS_LABELS[key]
+          return (
+            <button
+              key={key}
+              onClick={() => setStatusFilter(key)}
+              className={cn(
+                'px-4 py-2.5 font-serif text-[15px] -mb-px border-b-2 flex items-baseline gap-2 transition-colors',
+                active ? 'italic text-ink border-ink' : 'text-sepia border-transparent hover:text-ink',
+              )}
+            >
+              {label}
+              <span className="font-mono text-[10.5px] text-sepia not-italic">{count}</span>
+            </button>
+          )
+        })}
       </div>
 
       {isLoading ? (
-        <div className="space-y-3">
-          {[...Array(3)].map((_, i) => (
-            <div key={i} className="h-28 rounded-xl bg-gray-100 animate-pulse" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="h-36 rounded-md bg-sepia-soft animate-pulse" />
           ))}
         </div>
       ) : filtered.length === 0 ? (
-        <Card className="border-gray-100 shadow-sm">
-          <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-            <Target className="w-10 h-10 text-gray-200 mb-3" />
-            <p className="text-gray-500 font-medium">Sin metas todavía</p>
-            <p className="text-gray-400 text-sm mt-1">Creá tu primera meta de ahorro para empezar</p>
-            <Button size="sm" className="mt-4 bg-blue-600 hover:bg-blue-700" onClick={() => { cancelForm(); setShowForm(true) }}>
-              <Plus className="w-3.5 h-3.5 mr-1" />
-              Crear meta
-            </Button>
-          </CardContent>
-        </Card>
+        <p className="font-serif italic text-sepia text-[15px] text-center py-12">
+          Sin metas todavía. <button onClick={() => setShowForm(true)} className="underline underline-offset-[3px] hover:text-ink">Creá la primera →</button>
+        </p>
       ) : (
-        <div className="space-y-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {filtered.map((g) => {
-            const cfg = STATUS_CONFIG[g.status]
+            const near = g.progressPercentage >= 80
             return (
-              <Card key={g.id} className="border-gray-100 shadow-sm hover:shadow-md transition-shadow">
-                <CardContent className="p-5">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1 min-w-0 mr-4">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-lg">{g.icon ?? '🎯'}</span>
-                        <p className="font-semibold text-gray-900">{g.name}</p>
-                        <Badge variant={cfg.variant} className="text-xs">{cfg.label}</Badge>
-                      </div>
-                      {g.description && <p className="text-sm text-gray-500 mb-3">{g.description}</p>}
-                      <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden mb-2">
-                        <div
-                          className={cn('h-full rounded-full transition-all duration-500', cfg.color)}
-                          style={{ width: `${Math.min(g.progressPercentage, 100)}%` }}
-                        />
-                      </div>
-                      <div className="flex items-center justify-between text-xs text-gray-500">
-                        <span>{formatCurrency(g.currentAmount, user?.currency)} ahorrado</span>
-                        <span className="font-semibold text-gray-700">
-                          {g.progressPercentage.toFixed(1)}% de {formatCurrency(g.targetAmount, user?.currency)}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-1 flex-shrink-0">
-                      <Link
-                        to={`/goals/${g.id}`}
-                        className="p-2 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors"
-                      >
-                        <ChevronRight className="w-4 h-4" />
+              <article key={g.id} className="border border-rule rounded-md bg-paper/40 backdrop-blur-[2px] p-[20px_22px]">
+                <div className="flex items-start gap-3.5">
+                  <div className="w-11 h-11 rounded-md bg-sepia-soft flex items-center justify-center text-[24px] text-ink flex-shrink-0">
+                    {g.icon ?? '◇'}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-baseline justify-between gap-3">
+                      <Link to={`/goals/${g.id}`} className="font-serif text-[19px] font-medium leading-tight hover:underline underline-offset-4 decoration-rule">
+                        {g.name}
                       </Link>
-                      <button
-                        onClick={() => { if (window.confirm(`¿Eliminar "${g.name}"?`)) deleteMutation.mutate(g.id) }}
-                        className="p-2 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                      <span className={cn('font-serif italic text-[22px] leading-none', near ? 'text-sage' : 'text-ink')}>
+                        {g.progressPercentage.toFixed(0)} %
+                      </span>
+                    </div>
+                    <div className="text-[11.5px] text-sepia mt-0.5 tracking-wide">
+                      {STATUS_LABELS[g.status]}
+                      {g.targetDate && ` · ETA ${new Date(g.targetDate).toLocaleDateString('es-AR', { month: 'short', year: '2-digit' })}`}
                     </div>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+
+                <div className="mt-4 h-1.5 bg-sepia-soft rounded-pill overflow-hidden">
+                  <div
+                    className={cn('h-full transition-all duration-500', near ? 'bg-sage' : 'bg-ink')}
+                    style={{ width: `${Math.min(g.progressPercentage, 100)}%` }}
+                  />
+                </div>
+                <div className="flex justify-between mt-2 font-mono text-[11.5px] text-sepia">
+                  <span>{formatCurrency(g.currentAmount, user?.currency)}</span>
+                  <span>{formatCurrency(g.targetAmount, user?.currency)}</span>
+                </div>
+
+                <div className="flex items-baseline justify-between mt-3 pt-3 border-t border-dashed border-rule text-[12px]">
+                  <span className="text-sepia">Aporte mensual</span>
+                  <div className="flex items-center gap-3">
+                    <span className="font-serif italic">
+                      {g.monthlyTargetAmount ? formatCurrency(g.monthlyTargetAmount, user?.currency) : '—'}
+                    </span>
+                    <button
+                      onClick={() => { if (window.confirm(`¿Eliminar "${g.name}"?`)) deleteMutation.mutate(g.id) }}
+                      className="text-sepia hover:text-wine transition-colors"
+                      aria-label="Eliminar"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              </article>
             )
           })}
         </div>
       )}
+    </div>
+  )
+}
+
+function SummaryCell({
+  label, value, hint, primary, withLeftRule,
+}: {
+  label: string
+  value: string
+  hint?: string
+  primary?: boolean
+  withLeftRule?: boolean
+}) {
+  return (
+    <div
+      className={cn(
+        'p-[18px_22px]',
+        withLeftRule && 'md:border-l border-rule',
+        primary && 'bg-sage/[0.06]',
+      )}
+    >
+      <div className="text-[11px] tracking-[0.18em] uppercase text-sepia font-semibold">{label}</div>
+      <div className={cn('font-serif font-normal mt-1.5 leading-[1.1] tracking-tight', primary ? 'text-[22px] text-sage' : 'text-[26px] text-ink')}>
+        {value}
+      </div>
+      {hint && <div className="text-[11.5px] text-sepia mt-2">{hint}</div>}
     </div>
   )
 }
