@@ -3,20 +3,18 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Plus, Trash2, Pencil, X, Search, ArrowLeftRight, TrendingUp, TrendingDown } from 'lucide-react'
+import { X, Pencil, Trash2 } from 'lucide-react'
 import { transactionsApi } from '@/api/transactions'
 import { categoriesApi } from '@/api/categories'
 import { useAuthStore } from '@/stores/authStore'
 import { useToast } from '@/components/ui/toast'
 import type { CreateTransactionRequest, Transaction } from '@/types/transaction'
-import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { TableRowSkeleton } from '@/components/ui/skeleton'
-import { formatCurrency, formatDate } from '@/lib/utils'
-import { cn } from '@/lib/utils'
+import { formatCurrency, cn } from '@/lib/utils'
+
+const MONTHS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
+const MONTHS_SHORT = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
 
 const schema = z.object({
   description: z.string().min(1, 'Requerido').max(100),
@@ -28,13 +26,31 @@ const schema = z.object({
 })
 type FormData = z.infer<typeof schema>
 
+type Filter = 'ALL' | 'INCOME' | 'EXPENSE'
+const FILTER_LABELS: Record<Filter, string> = { ALL: 'Todas', INCOME: 'Ingresos', EXPENSE: 'Gastos' }
+
+function dayKey(iso: string) {
+  const d = new Date(iso)
+  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`
+}
+
+function dayLabel(iso: string) {
+  const d = new Date(iso)
+  return `${String(d.getDate()).padStart(2, '0')} ${MONTHS_SHORT[d.getMonth()]}`
+}
+
+function timeLabel(iso: string) {
+  const d = new Date(iso)
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+}
+
 export default function TransactionsPage() {
   const qc = useQueryClient()
   const user = useAuthStore((s) => s.user)
   const toast = useToast()
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<Transaction | null>(null)
-  const [filterType, setFilterType] = useState<'ALL' | 'INCOME' | 'EXPENSE'>('ALL')
+  const [filterType, setFilterType] = useState<Filter>('ALL')
   const [search, setSearch] = useState('')
 
   const { data: transactions = [], isLoading } = useQuery({
@@ -53,9 +69,8 @@ export default function TransactionsPage() {
     reset,
     watch,
     formState: { errors, isSubmitting },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } = useForm<FormData>({
-    resolver: zodResolver(schema) as any,
+    resolver: zodResolver(schema) as never,
     defaultValues: { type: 'EXPENSE' },
   })
 
@@ -75,8 +90,7 @@ export default function TransactionsPage() {
   })
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: FormData }) =>
-      transactionsApi.update(id, data),
+    mutationFn: ({ id, data }: { id: number; data: FormData }) => transactionsApi.update(id, data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['transactions'] })
       qc.invalidateQueries({ queryKey: ['account', 'summary'] })
@@ -128,187 +142,200 @@ export default function TransactionsPage() {
     .filter((t) => filterType === 'ALL' || t.type === filterType)
     .filter((t) => !search || t.description.toLowerCase().includes(search.toLowerCase()))
 
+  const grouped = filtered.reduce<Record<string, { label: string; items: Transaction[] }>>((acc, t) => {
+    const k = dayKey(t.date)
+    if (!acc[k]) acc[k] = { label: dayLabel(t.date), items: [] }
+    acc[k].items.push(t)
+    return acc
+  }, {})
+
+  const currentMonth = MONTHS[new Date().getMonth()]
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-baseline justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Transacciones</h1>
-          <p className="text-gray-500 text-sm mt-0.5">Administrá tus ingresos y gastos</p>
+          <div className="text-[11px] tracking-[0.2em] uppercase text-sepia font-semibold">Cuaderno</div>
+          <h1 className="font-serif font-normal text-[36px] leading-[1.05] tracking-tight mt-1">
+            Transacciones <em className="text-sepia">de {currentMonth}</em>
+          </h1>
         </div>
-        <Button onClick={() => { cancelForm(); setShowForm(true) }} className="gap-2 bg-blue-600 hover:bg-blue-700">
-          <Plus className="w-4 h-4" />
-          Nueva transacción
-        </Button>
+        <button
+          onClick={() => { cancelForm(); setShowForm(true) }}
+          className="inline-flex items-center gap-2 bg-ink text-paper rounded-pill px-[18px] py-[11px] text-[13.5px] font-semibold leading-none"
+        >
+          <span className="text-base leading-none">+</span> Nueva transacción
+        </button>
       </div>
 
-      {/* Form */}
       {showForm && (
-        <Card className="border-blue-200 shadow-md">
-          <CardHeader className="flex flex-row items-center justify-between pb-3 border-b border-gray-100">
-            <CardTitle className="text-base font-semibold text-gray-900">
-              {editing ? 'Editar transacción' : 'Nueva transacción'}
-            </CardTitle>
-            <button onClick={cancelForm} className="p-1 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
+        <section className="border border-ink rounded-md bg-paper/60 backdrop-blur-[2px] p-[22px]">
+          <div className="flex items-baseline justify-between mb-4">
+            <h2 className="font-serif italic font-medium text-[19px]">
+              {editing ? 'Editar transacción' : 'Anotar una transacción'}
+            </h2>
+            <button onClick={cancelForm} className="text-sepia hover:text-ink transition-colors" aria-label="Cerrar">
               <X className="w-4 h-4" />
             </button>
-          </CardHeader>
-          <CardContent className="pt-5">
-            <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-2 gap-4">
-              <div className="col-span-2 space-y-1.5">
-                <Label className="text-gray-700 font-medium">Descripción</Label>
-                <Input placeholder="ej. Supermercado" {...register('description')} />
-                {errors.description && <p className="text-xs text-red-500">{errors.description.message}</p>}
-              </div>
+          </div>
 
-              <div className="space-y-1.5">
-                <Label className="text-gray-700 font-medium">Monto</Label>
-                <Input type="number" step="0.01" placeholder="0.00" {...register('amount')} />
-                {errors.amount && <p className="text-xs text-red-500">{errors.amount.message}</p>}
-              </div>
+          <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-2 gap-5">
+            <div className="col-span-2">
+              <Input label="Descripción" placeholder="ej. Café con leche" {...register('description')} />
+              {errors.description && <p className="font-serif italic text-[12px] text-wine mt-1">{errors.description.message}</p>}
+            </div>
 
-              <div className="space-y-1.5">
-                <Label className="text-gray-700 font-medium">Tipo</Label>
-                <select
-                  className="flex h-9 w-full rounded-md border border-gray-200 bg-white px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-500"
-                  {...register('type')}
-                >
-                  <option value="EXPENSE">Gasto</option>
-                  <option value="INCOME">Ingreso</option>
-                </select>
-              </div>
+            <div>
+              <Input label="Monto" type="number" step="0.01" placeholder="0.00" {...register('amount')} />
+              {errors.amount && <p className="font-serif italic text-[12px] text-wine mt-1">{errors.amount.message}</p>}
+            </div>
 
-              <div className="space-y-1.5">
-                <Label className="text-gray-700 font-medium">Categoría</Label>
-                <select
-                  className="flex h-9 w-full rounded-md border border-gray-200 bg-white px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-500"
-                  {...register('categoryId')}
-                >
-                  <option value="">Seleccioná una categoría</option>
-                  {filteredCategories.map((c) => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
-                {errors.categoryId && <p className="text-xs text-red-500">{errors.categoryId.message}</p>}
-              </div>
+            <div className="flex flex-col">
+              <span className="text-[10.5px] uppercase tracking-[0.14em] text-sepia font-semibold mb-1.5">Tipo</span>
+              <select
+                className="font-serif text-[17px] bg-transparent outline-none px-0 py-1.5 border-b border-rule focus:border-ink transition-colors"
+                {...register('type')}
+              >
+                <option value="EXPENSE">Gasto</option>
+                <option value="INCOME">Ingreso</option>
+              </select>
+            </div>
 
-              <div className="space-y-1.5">
-                <Label className="text-gray-700 font-medium">Fecha (opcional)</Label>
-                <Input type="datetime-local" {...register('date')} />
-              </div>
+            <div className="flex flex-col">
+              <span className="text-[10.5px] uppercase tracking-[0.14em] text-sepia font-semibold mb-1.5">Categoría</span>
+              <select
+                className="font-serif text-[17px] bg-transparent outline-none px-0 py-1.5 border-b border-rule focus:border-ink transition-colors"
+                {...register('categoryId')}
+              >
+                <option value="">Seleccioná una categoría</option>
+                {filteredCategories.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+              {errors.categoryId && <p className="font-serif italic text-[12px] text-wine mt-1">{errors.categoryId.message}</p>}
+            </div>
 
-              <div className="col-span-2 space-y-1.5">
-                <Label className="text-gray-700 font-medium">Notas (opcional)</Label>
-                <Input placeholder="Notas adicionales" {...register('notes')} />
-              </div>
+            <div>
+              <Input label="Fecha" type="datetime-local" {...register('date')} />
+            </div>
 
-              <div className="col-span-2 flex gap-2 pt-1">
-                <Button type="submit" disabled={isSubmitting} className="bg-blue-600 hover:bg-blue-700">
-                  {isSubmitting ? 'Guardando…' : editing ? 'Actualizar' : 'Crear'}
-                </Button>
-                <Button type="button" variant="outline" onClick={cancelForm}>Cancelar</Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
+            <div className="col-span-2">
+              <Input label="Notas" placeholder="Detalles adicionales" {...register('notes')} />
+            </div>
+
+            <div className="col-span-2 flex items-center gap-3 pt-2">
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="inline-flex items-center gap-2 bg-ink text-paper rounded-pill px-[18px] py-[11px] text-[13.5px] font-semibold leading-none disabled:opacity-50"
+              >
+                {isSubmitting ? 'Guardando…' : editing ? 'Actualizar' : 'Guardar ↵'}
+              </button>
+              <button
+                type="button"
+                onClick={cancelForm}
+                className="font-serif italic text-sepia hover:text-ink transition-colors text-[14px]"
+              >
+                Cancelar
+              </button>
+            </div>
+          </form>
+        </section>
       )}
 
-      {/* Filters */}
-      <div className="flex items-center gap-3 flex-wrap">
-        <div className="flex gap-1.5 p-1 bg-gray-100 rounded-lg">
-          {(['ALL', 'INCOME', 'EXPENSE'] as const).map((f) => (
-            <button
-              key={f}
-              onClick={() => setFilterType(f)}
-              className={cn(
-                'px-3 py-1.5 rounded-md text-xs font-semibold transition-all',
-                filterType === f
-                  ? 'bg-white text-gray-900 shadow-sm'
-                  : 'text-gray-500 hover:text-gray-700'
-              )}
-            >
-              {f === 'ALL' ? 'Todas' : f === 'INCOME' ? 'Ingresos' : 'Gastos'}
-            </button>
-          ))}
+      <div className="flex items-baseline gap-6 flex-wrap">
+        <div className="flex items-baseline gap-5">
+          {(['ALL', 'INCOME', 'EXPENSE'] as const).map((f) => {
+            const active = filterType === f
+            return (
+              <button
+                key={f}
+                onClick={() => setFilterType(f)}
+                className={cn(
+                  'font-serif text-[14px] transition-colors',
+                  active
+                    ? 'italic text-ink underline underline-offset-4 decoration-gold'
+                    : 'text-sepia hover:text-ink',
+                )}
+              >
+                {FILTER_LABELS[f]}
+              </button>
+            )
+          })}
         </div>
-        <div className="relative flex-1 max-w-xs">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+        <div className="flex-1 max-w-xs">
           <Input
             placeholder="Buscar transacción…"
-            className="pl-9 h-8 text-sm"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-        <span className="text-sm text-gray-400 ml-auto">{filtered.length} transacciones</span>
+        <span className="text-[11.5px] text-sepia ml-auto font-mono">
+          {filtered.length} mov.
+        </span>
       </div>
 
-      {/* List */}
-      <Card className="border-gray-100 shadow-sm overflow-hidden">
+      <section className="border border-rule rounded-md bg-paper/40 backdrop-blur-[2px]">
         {isLoading ? (
-          <div className="divide-y divide-gray-50">
-            {[...Array(6)].map((_, i) => <TableRowSkeleton key={i} />)}
-          </div>
+          <>{[...Array(6)].map((_, i) => <TableRowSkeleton key={i} />)}</>
         ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <ArrowLeftRight className="w-10 h-10 text-gray-200 mb-3" />
-            <p className="text-gray-500 font-medium">Sin transacciones</p>
-            <p className="text-gray-400 text-sm mt-1">
-              {search ? 'Probá con otra búsqueda' : 'Creá tu primera transacción'}
-            </p>
-            {!search && (
-              <Button
-                size="sm"
-                className="mt-4 bg-blue-600 hover:bg-blue-700"
-                onClick={() => { cancelForm(); setShowForm(true) }}
-              >
-                <Plus className="w-3.5 h-3.5 mr-1" />
-                Nueva transacción
-              </Button>
-            )}
-          </div>
+          <p className="font-serif italic text-sepia text-[15px] text-center py-12">
+            {search ? 'Nada coincide con esa búsqueda.' : 'La página del mes está en blanco.'}
+          </p>
         ) : (
-          <div className="divide-y divide-gray-50">
-            {filtered.map((t) => (
-              <div key={t.id} className="flex items-center px-5 py-4 hover:bg-gray-50/60 transition-colors group">
-                <div
-                  className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 mr-4"
-                  style={{ backgroundColor: t.type === 'INCOME' ? '#d1fae5' : '#fee2e2' }}
-                >
-                  {t.type === 'INCOME'
-                    ? <TrendingUp className="w-4 h-4 text-emerald-600" />
-                    : <TrendingDown className="w-4 h-4 text-red-500" />}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-gray-900 truncate">{t.description}</p>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <span className="text-xs text-gray-400">{formatDate(t.date)}</span>
-                    <Badge variant="secondary" className="text-[11px] py-0">{t.categoryName}</Badge>
+          <div>
+            {Object.entries(grouped).map(([k, group]) => {
+              const dayNet = group.items.reduce((s, t) => s + (t.type === 'INCOME' ? t.amount : -t.amount), 0)
+              return (
+                <div key={k}>
+                  <div className="flex items-baseline justify-between px-[22px] py-2.5 border-b border-rule">
+                    <span className="text-[11px] tracking-[0.18em] uppercase text-sepia font-semibold">{group.label}</span>
+                    <span className={cn('font-mono text-[11.5px]', dayNet >= 0 ? 'text-sage' : 'text-ink')}>
+                      Neto {dayNet >= 0 ? '+ ' : '− '}
+                      {formatCurrency(Math.abs(dayNet), user?.currency)}
+                    </span>
                   </div>
+                  {group.items.map((t, i, arr) => (
+                    <div
+                      key={t.id}
+                      className={cn(
+                        'group grid grid-cols-[70px_1fr_160px_140px_60px] gap-4 items-center px-[22px] py-2.5',
+                        i < arr.length - 1 && 'border-b border-rule-soft',
+                      )}
+                    >
+                      <span className="font-mono text-[11.5px] text-sepia">{timeLabel(t.date)}</span>
+                      <span className="font-serif text-base truncate">{t.description}</span>
+                      <span className="text-[11.5px] text-sepia truncate">{t.categoryName}</span>
+                      <span className={cn('font-serif text-[18px] text-right', t.type === 'INCOME' ? 'text-sage' : 'text-ink')}>
+                        {t.type === 'INCOME' ? '+ ' : '− '}
+                        {formatCurrency(t.amount, user?.currency)}
+                      </span>
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity justify-end">
+                        <button
+                          onClick={() => startEdit(t)}
+                          className="p-1 text-sepia hover:text-ink transition-colors"
+                          aria-label="Editar"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (window.confirm(`¿Eliminar "${t.description}"?`)) deleteMutation.mutate(t.id)
+                          }}
+                          className="p-1 text-sepia hover:text-wine transition-colors"
+                          aria-label="Eliminar"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <span className={cn('text-sm font-bold mx-4', t.type === 'INCOME' ? 'text-emerald-600' : 'text-red-500')}>
-                  {t.type === 'INCOME' ? '+' : '-'}{formatCurrency(t.amount, user?.currency)}
-                </span>
-                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button
-                    onClick={() => startEdit(t)}
-                    className="p-1.5 rounded-lg hover:bg-gray-200 text-gray-400 hover:text-gray-700 transition-colors"
-                  >
-                    <Pencil className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    onClick={() => {
-                      if (window.confirm(`¿Eliminar "${t.description}"?`)) deleteMutation.mutate(t.id)
-                    }}
-                    className="p-1.5 rounded-lg hover:bg-red-100 text-gray-400 hover:text-red-500 transition-colors"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
-      </Card>
+      </section>
     </div>
   )
 }
