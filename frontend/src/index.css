@@ -1,62 +1,57 @@
+/* frontend/src/index.css */
 @import "tailwindcss";
 
-@layer base {
-  :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 221.2 83.2% 53.3%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
-    --radius: 0.5rem;
-  }
+@theme {
+  /* Cuaderno · paleta papel */
+  --color-paper:      #f4ecdd;
+  --color-paper-2:    #ede2cd;
+  --color-ink:        #1a1612;
+  --color-rule:       #c9bca0;
+  --color-rule-soft:  rgba(201, 188, 160, 0.5);
+  --color-sepia:      #7c5a2a;
+  --color-sepia-soft: rgba(124, 90, 42, 0.12);
+  --color-sage:       #5e7a4f;
+  --color-sage-soft:  rgba(94, 122, 79, 0.15);
+  --color-wine:       #9a3a2e;
+  --color-wine-soft:  rgba(154, 58, 46, 0.12);
+  --color-gold:       #d4a657;
 
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 48%;
-  }
+  /* Cuaderno · paleta tinta (inversiones) */
+  --color-tinta-bg:    #1f2a38;
+  --color-tinta-bg-2:  #27374a;
+  --color-tinta-rule:  #36465a;
+  --color-tinta-ink:   #ecdfbd;
+  --color-tinta-sepia: #c7a974;
+  --color-tinta-sage:  #9ec79c;
+  --color-tinta-wine:  #d27e7e;
+  --color-tinta-gold:  #d4a85a;
+
+  /* Fuentes */
+  --font-serif: 'Newsreader', Georgia, serif;
+  --font-sans:  'Hanken Grotesk', system-ui, sans-serif;
+  --font-mono:  'JetBrains Mono', ui-monospace, monospace;
+
+  /* Radios */
+  --radius-xs:   4px;
+  --radius-sm:   6px;
+  --radius-md:   8px;
+  --radius-lg:   12px;
+  --radius-pill: 999px;
+
+  /* Sombras */
+  --shadow-card: 0 8px 16px -10px rgba(26, 22, 18, 0.18);
+  --shadow-pop:  0 18px 30px -16px rgba(26, 22, 18, 0.32);
 }
 
 @layer base {
-  * {
-    border-color: hsl(var(--border));
-    box-sizing: border-box;
-  }
   body {
-    background-color: hsl(var(--background));
-    color: hsl(var(--foreground));
-    margin: 0;
-    font-family: system-ui, -apple-system, sans-serif;
+    background: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
+    background-image:
+      radial-gradient(circle at 25% 8%, rgba(255,255,255,0.5), transparent 50%),
+      radial-gradient(circle at 90% 100%, rgba(196,170,120,0.16), transparent 50%);
+    background-attachment: fixed;
   }
 }
