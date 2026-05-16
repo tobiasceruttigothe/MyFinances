@@ -2,13 +2,11 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Link, useNavigate } from 'react-router-dom'
-import { TrendingUp, ArrowRight, Eye, EyeOff } from 'lucide-react'
+import { Eye, EyeOff } from 'lucide-react'
 import { useState } from 'react'
 import { authApi } from '@/api/auth'
 import { useAuthStore } from '@/stores/authStore'
-import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { generateCodeVerifier, generateCodeChallenge, generateState, buildKeycloakAuthUrl } from '@/lib/pkce'
 
 const KEYCLOAK_URL = import.meta.env.VITE_KEYCLOAK_URL ?? 'http://localhost:8082'
@@ -47,12 +45,9 @@ export default function LoginPage() {
     })
   }
 
-  const {
-    register,
-    handleSubmit,
-    setError,
-    formState: { errors, isSubmitting },
-  } = useForm<FormData>({ resolver: zodResolver(schema) })
+  const { register, handleSubmit, setError, formState: { errors, isSubmitting } } = useForm<FormData>({
+    resolver: zodResolver(schema),
+  })
 
   async function onSubmit(data: FormData) {
     try {
@@ -62,82 +57,56 @@ export default function LoginPage() {
       setUser(profile)
       navigate('/dashboard')
     } catch {
-      setError('root', { message: 'Email o contraseña incorrectos' })
+      setError('root', { message: 'Email o contraseña incorrectos.' })
     }
   }
 
   return (
     <div className="min-h-screen flex">
-      {/* Left panel — brand */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 flex-col justify-between p-12 relative overflow-hidden">
-        {/* Background decoration */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-white/5" />
-          <div className="absolute -bottom-32 -left-16 w-[500px] h-[500px] rounded-full bg-white/5" />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 rounded-full bg-white/3" />
-        </div>
-
-        <div className="relative z-10 flex items-center gap-3">
-          <div className="flex items-center justify-center w-10 h-10 bg-white/20 rounded-xl backdrop-blur-sm">
-            <TrendingUp className="w-5 h-5 text-white" />
+      <section className="hidden lg:flex lg:flex-[1.05] flex-col p-16 border-r border-rule">
+        <div>
+          <div className="font-serif font-medium text-[26px] leading-none tracking-tight">
+            MyFinances<span className="text-wine">.</span>
           </div>
-          <span className="font-bold text-white text-xl tracking-tight">MyFinances</span>
-        </div>
-
-        <div className="relative z-10 space-y-6">
-          <div>
-            <h1 className="text-4xl font-bold text-white leading-tight mb-3">
-              Tomá el control<br />de tu dinero
-            </h1>
-            <p className="text-blue-200 text-lg leading-relaxed">
-              Seguí tus gastos, inversiones y metas desde un solo lugar.
-            </p>
-          </div>
-          <div className="space-y-3">
-            {[
-              'Transacciones e ingresos en tiempo real',
-              'Seguimiento de inversiones con P&L',
-              'Metas de ahorro con progreso automático',
-            ].map((f) => (
-              <div key={f} className="flex items-center gap-2.5">
-                <div className="w-5 h-5 rounded-full bg-emerald-400/30 flex items-center justify-center flex-shrink-0">
-                  <div className="w-2 h-2 rounded-full bg-emerald-400" />
-                </div>
-                <span className="text-blue-100 text-sm">{f}</span>
-              </div>
-            ))}
+          <div className="text-[11px] tracking-[0.2em] uppercase text-sepia mt-1 font-semibold">
+            Cuaderno de cuentas
           </div>
         </div>
 
-        <p className="relative z-10 text-blue-300 text-xs">
-          © 2026 MyFinances · Todos los derechos reservados
-        </p>
-      </div>
+        <div className="mt-auto">
+          <div className="text-[11px] tracking-[0.2em] uppercase text-sepia font-semibold">
+            Bienvenido, otra vez.
+          </div>
+          <h1 className="font-serif font-normal text-[44px] leading-[1.05] tracking-tight mt-2.5 mb-4 max-w-md">
+            «Quien no sabe lo que gasta, <em className="text-sepia">ignora lo que vale.»</em>
+          </h1>
+          <p className="text-[15px] leading-relaxed text-ink/80 max-w-md">
+            Tu cuaderno está esperándote. Entrá y seguí escribiendo dónde se
+            van tus pesos — y de paso, dónde van a ir.
+          </p>
+        </div>
+      </section>
 
-      {/* Right panel — form */}
-      <div className="flex-1 flex items-center justify-center bg-gray-50 px-6 py-12">
+      <section className="flex-1 lg:flex-[0.95] flex items-center justify-center px-6 py-12">
         <div className="w-full max-w-sm">
-          {/* Mobile logo */}
-          <div className="flex items-center gap-2 mb-8 lg:hidden">
-            <div className="flex items-center justify-center w-9 h-9 bg-blue-600 rounded-xl">
-              <TrendingUp className="w-4 h-4 text-white" />
+          <div className="lg:hidden mb-8">
+            <div className="font-serif font-medium text-[22px] leading-none tracking-tight">
+              MyFinances<span className="text-wine">.</span>
             </div>
-            <span className="font-bold text-gray-900 text-lg">MyFinances</span>
           </div>
 
-          <div className="mb-8">
-            <h2 className="text-2xl font-bold text-gray-900">Iniciar sesión</h2>
-            <p className="text-gray-500 text-sm mt-1">Ingresá tu email y contraseña para continuar</p>
-          </div>
+          <div className="text-[11px] tracking-[0.2em] uppercase text-sepia font-semibold">Acceder</div>
+          <h2 className="font-serif font-normal text-[36px] leading-[1.05] tracking-tight mt-1.5 mb-8">
+            Abrí <em className="text-sepia">tu cuaderno.</em>
+          </h2>
 
-          {/* Google OAuth */}
           <button
             type="button"
             onClick={loginWithGoogle}
             disabled={googleLoading}
-            className="w-full flex items-center justify-center gap-3 h-11 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-sm font-medium text-gray-700 transition-colors disabled:opacity-60"
+            className="w-full flex items-center justify-center gap-3 border border-rule rounded-sm px-4 py-3 font-serif text-[14px] hover:bg-sepia-soft transition-colors disabled:opacity-60"
           >
-            <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24">
+            <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
               <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
               <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
@@ -146,74 +115,60 @@ export default function LoginPage() {
             {googleLoading ? 'Redirigiendo…' : 'Continuar con Google'}
           </button>
 
-          <div className="flex items-center gap-3">
-            <div className="flex-1 h-px bg-gray-200" />
-            <span className="text-xs text-gray-400">o</span>
-            <div className="flex-1 h-px bg-gray-200" />
+          <div className="flex items-center gap-3 my-7">
+            <div className="flex-1 h-px bg-rule" />
+            <span className="font-serif italic text-[11.5px] text-sepia">o con tu email</span>
+            <div className="flex-1 h-px bg-rule" />
           </div>
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-            <div className="space-y-1.5">
-              <Label htmlFor="email" className="text-gray-700 font-medium">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="tu@email.com"
-                className="h-11 bg-white border-gray-200 focus:border-blue-500 focus:ring-blue-500/20"
-                {...register('email')}
-              />
-              {errors.email && <p className="text-xs text-red-500">{errors.email.message}</p>}
+            <div>
+              <Input label="Email" type="email" placeholder="tu@email.com" autoComplete="email" {...register('email')} />
+              {errors.email && <p className="font-serif italic text-[12px] text-wine mt-1">{errors.email.message}</p>}
             </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="password" className="text-gray-700 font-medium">Contraseña</Label>
-              <div className="relative">
-                <Input
-                  id="password"
-                  type={showPass ? 'text' : 'password'}
-                  placeholder="••••••••"
-                  className="h-11 bg-white border-gray-200 focus:border-blue-500 focus:ring-blue-500/20 pr-10"
-                  {...register('password')}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPass((p) => !p)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                >
-                  {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-              {errors.password && <p className="text-xs text-red-500">{errors.password.message}</p>}
+            <div className="relative">
+              <Input
+                label="Contraseña"
+                type={showPass ? 'text' : 'password'}
+                placeholder="••••••••"
+                autoComplete="current-password"
+                {...register('password')}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPass((p) => !p)}
+                className="absolute right-0 bottom-2 text-sepia hover:text-ink transition-colors"
+                aria-label={showPass ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+              >
+                {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+              {errors.password && <p className="font-serif italic text-[12px] text-wine mt-1">{errors.password.message}</p>}
             </div>
 
             {errors.root && (
-              <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3">
-                <p className="text-sm text-red-600">{errors.root.message}</p>
+              <div className="border-l-4 border-l-wine border border-rule bg-paper px-4 py-2.5 rounded-sm">
+                <p className="font-serif italic text-[13px] text-ink">{errors.root.message}</p>
               </div>
             )}
 
-            <Button
+            <button
               type="submit"
-              className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white font-semibold gap-2"
               disabled={isSubmitting}
+              className="w-full inline-flex items-center justify-center gap-2 bg-ink text-paper rounded-pill px-[18px] py-[12px] text-[13.5px] font-semibold leading-none disabled:opacity-50"
             >
-              {isSubmitting ? 'Ingresando…' : (
-                <>
-                  Ingresar
-                  <ArrowRight className="w-4 h-4" />
-                </>
-              )}
-            </Button>
+              {isSubmitting ? 'Ingresando…' : 'Entrar →'}
+            </button>
           </form>
 
-          <p className="mt-6 text-center text-sm text-gray-500">
-            ¿No tenés cuenta?{' '}
-            <Link to="/register" className="text-blue-600 hover:text-blue-700 font-semibold hover:underline">
-              Crear cuenta
+          <p className="mt-7 text-center font-serif italic text-[14px] text-sepia">
+            ¿Todavía sin cuenta?{' '}
+            <Link to="/register" className="not-italic underline underline-offset-[3px] hover:text-ink transition-colors">
+              Empezar un cuaderno
             </Link>
           </p>
         </div>
-      </div>
+      </section>
     </div>
   )
 }

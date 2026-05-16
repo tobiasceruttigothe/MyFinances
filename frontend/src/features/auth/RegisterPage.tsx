@@ -2,13 +2,11 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Link, useNavigate } from 'react-router-dom'
-import { TrendingUp, ArrowRight, Eye, EyeOff } from 'lucide-react'
+import { Eye, EyeOff } from 'lucide-react'
 import { useState } from 'react'
 import { authApi } from '@/api/auth'
 import { useAuthStore } from '@/stores/authStore'
-import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 
 const schema = z.object({
   firstName: z.string().min(1, 'Requerido').max(50),
@@ -27,12 +25,9 @@ export default function RegisterPage() {
   const navigate = useNavigate()
   const { setTokens, setUser } = useAuthStore()
   const [showPass, setShowPass] = useState(false)
-  const {
-    register,
-    handleSubmit,
-    setError,
-    formState: { errors, isSubmitting },
-  } = useForm<FormData>({ resolver: zodResolver(schema) })
+  const { register, handleSubmit, setError, formState: { errors, isSubmitting } } = useForm<FormData>({
+    resolver: zodResolver(schema),
+  })
 
   async function onSubmit(data: FormData) {
     try {
@@ -43,147 +38,113 @@ export default function RegisterPage() {
       setUser(profile)
       navigate('/dashboard')
     } catch {
-      setError('root', { message: 'Error al registrarse. El email o nombre de usuario ya puede estar en uso.' })
+      setError('root', { message: 'No pudimos crear la cuenta. Quizás el email o usuario ya estén tomados.' })
     }
   }
 
   return (
     <div className="min-h-screen flex">
-      {/* Left panel — brand */}
-      <div className="hidden lg:flex lg:w-5/12 bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 flex-col justify-between p-12 relative overflow-hidden">
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-white/5" />
-          <div className="absolute -bottom-32 -left-16 w-[500px] h-[500px] rounded-full bg-white/5" />
-        </div>
-
-        <div className="relative z-10 flex items-center gap-3">
-          <div className="flex items-center justify-center w-10 h-10 bg-white/20 rounded-xl backdrop-blur-sm">
-            <TrendingUp className="w-5 h-5 text-white" />
+      <section className="hidden lg:flex lg:flex-[0.9] flex-col p-16 border-r border-rule">
+        <div>
+          <div className="font-serif font-medium text-[26px] leading-none tracking-tight">
+            MyFinances<span className="text-wine">.</span>
           </div>
-          <span className="font-bold text-white text-xl tracking-tight">MyFinances</span>
+          <div className="text-[11px] tracking-[0.2em] uppercase text-sepia mt-1 font-semibold">
+            Cuaderno de cuentas
+          </div>
         </div>
 
-        <div className="relative z-10 space-y-4">
-          <h1 className="text-3xl font-bold text-white leading-tight">
-            Tu futuro financiero empieza hoy
+        <div className="mt-auto">
+          <div className="text-[11px] tracking-[0.2em] uppercase text-sepia font-semibold">
+            Hoja en blanco.
+          </div>
+          <h1 className="font-serif font-normal text-[44px] leading-[1.05] tracking-tight mt-2.5 mb-4 max-w-md">
+            Empezá un <em className="text-sepia">cuaderno nuevo.</em>
           </h1>
-          <p className="text-blue-200 leading-relaxed">
-            Creá tu cuenta gratis y comenzá a administrar tu dinero de forma inteligente.
+          <p className="text-[15px] leading-relaxed text-ink/80 max-w-md">
+            Cada peso anotado es una decisión más a tu favor. Creá tu cuenta y
+            seguí tus ingresos, gastos, inversiones y metas desde el mismo lugar.
           </p>
         </div>
+      </section>
 
-        <p className="relative z-10 text-blue-300 text-xs">
-          © 2026 MyFinances · Todos los derechos reservados
-        </p>
-      </div>
-
-      {/* Right panel — form */}
-      <div className="flex-1 flex items-center justify-center bg-gray-50 px-6 py-12 overflow-y-auto">
+      <section className="flex-1 lg:flex-[1.1] flex items-center justify-center px-6 py-12 overflow-y-auto">
         <div className="w-full max-w-md">
-          {/* Mobile logo */}
-          <div className="flex items-center gap-2 mb-8 lg:hidden">
-            <div className="flex items-center justify-center w-9 h-9 bg-blue-600 rounded-xl">
-              <TrendingUp className="w-4 h-4 text-white" />
+          <div className="lg:hidden mb-8">
+            <div className="font-serif font-medium text-[22px] leading-none tracking-tight">
+              MyFinances<span className="text-wine">.</span>
             </div>
-            <span className="font-bold text-gray-900 text-lg">MyFinances</span>
           </div>
 
-          <div className="mb-8">
-            <h2 className="text-2xl font-bold text-gray-900">Crear cuenta</h2>
-            <p className="text-gray-500 text-sm mt-1">Completá tus datos para comenzar</p>
-          </div>
+          <div className="text-[11px] tracking-[0.2em] uppercase text-sepia font-semibold">Crear cuenta</div>
+          <h2 className="font-serif font-normal text-[36px] leading-[1.05] tracking-tight mt-1.5 mb-8">
+            Anotate <em className="text-sepia">acá.</em>
+          </h2>
 
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label className="text-gray-700 font-medium">Nombre</Label>
-                <Input
-                  placeholder="Juan"
-                  className="h-11 bg-white border-gray-200"
-                  {...register('firstName')}
-                />
-                {errors.firstName && <p className="text-xs text-red-500">{errors.firstName.message}</p>}
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Input label="Nombre" placeholder="Juan" autoComplete="given-name" {...register('firstName')} />
+                {errors.firstName && <p className="font-serif italic text-[12px] text-wine mt-1">{errors.firstName.message}</p>}
               </div>
-              <div className="space-y-1.5">
-                <Label className="text-gray-700 font-medium">Apellido</Label>
-                <Input
-                  placeholder="Pérez"
-                  className="h-11 bg-white border-gray-200"
-                  {...register('lastName')}
-                />
-                {errors.lastName && <p className="text-xs text-red-500">{errors.lastName.message}</p>}
+              <div>
+                <Input label="Apellido" placeholder="Pérez" autoComplete="family-name" {...register('lastName')} />
+                {errors.lastName && <p className="font-serif italic text-[12px] text-wine mt-1">{errors.lastName.message}</p>}
               </div>
             </div>
 
-            <div className="space-y-1.5">
-              <Label className="text-gray-700 font-medium">Nombre de usuario</Label>
+            <div>
+              <Input label="Nombre de usuario" placeholder="juanperez" autoComplete="username" {...register('username')} />
+              {errors.username && <p className="font-serif italic text-[12px] text-wine mt-1">{errors.username.message}</p>}
+            </div>
+
+            <div>
+              <Input label="Email" type="email" placeholder="juan@ejemplo.com" autoComplete="email" {...register('email')} />
+              {errors.email && <p className="font-serif italic text-[12px] text-wine mt-1">{errors.email.message}</p>}
+            </div>
+
+            <div className="relative">
               <Input
-                placeholder="juanperez"
-                className="h-11 bg-white border-gray-200"
-                {...register('username')}
+                label="Contraseña"
+                type={showPass ? 'text' : 'password'}
+                placeholder="Mínimo 8 caracteres"
+                autoComplete="new-password"
+                {...register('password')}
               />
-              {errors.username && <p className="text-xs text-red-500">{errors.username.message}</p>}
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-gray-700 font-medium">Email</Label>
-              <Input
-                type="email"
-                placeholder="juan@ejemplo.com"
-                className="h-11 bg-white border-gray-200"
-                {...register('email')}
-              />
-              {errors.email && <p className="text-xs text-red-500">{errors.email.message}</p>}
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-gray-700 font-medium">Contraseña</Label>
-              <div className="relative">
-                <Input
-                  type={showPass ? 'text' : 'password'}
-                  placeholder="Mínimo 6 caracteres"
-                  className="h-11 bg-white border-gray-200 pr-10"
-                  {...register('password')}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPass((p) => !p)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                >
-                  {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-              {errors.password && <p className="text-xs text-red-500">{errors.password.message}</p>}
+              <button
+                type="button"
+                onClick={() => setShowPass((p) => !p)}
+                className="absolute right-0 bottom-2 text-sepia hover:text-ink transition-colors"
+                aria-label={showPass ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+              >
+                {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+              {errors.password && <p className="font-serif italic text-[12px] text-wine mt-1">{errors.password.message}</p>}
             </div>
 
             {errors.root && (
-              <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3">
-                <p className="text-sm text-red-600">{errors.root.message}</p>
+              <div className="border-l-4 border-l-wine border border-rule bg-paper px-4 py-2.5 rounded-sm">
+                <p className="font-serif italic text-[13px] text-ink">{errors.root.message}</p>
               </div>
             )}
 
-            <Button
+            <button
               type="submit"
-              className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white font-semibold gap-2 mt-2"
               disabled={isSubmitting}
+              className="w-full inline-flex items-center justify-center gap-2 bg-ink text-paper rounded-pill px-[18px] py-[12px] text-[13.5px] font-semibold leading-none disabled:opacity-50"
             >
-              {isSubmitting ? 'Creando cuenta…' : (
-                <>
-                  Crear cuenta
-                  <ArrowRight className="w-4 h-4" />
-                </>
-              )}
-            </Button>
+              {isSubmitting ? 'Creando cuenta…' : 'Empezar cuaderno →'}
+            </button>
           </form>
 
-          <p className="mt-6 text-center text-sm text-gray-500">
+          <p className="mt-7 text-center font-serif italic text-[14px] text-sepia">
             ¿Ya tenés cuenta?{' '}
-            <Link to="/login" className="text-blue-600 hover:text-blue-700 font-semibold hover:underline">
-              Iniciar sesión
+            <Link to="/login" className="not-italic underline underline-offset-[3px] hover:text-ink transition-colors">
+              Entrar
             </Link>
           </p>
         </div>
-      </div>
+      </section>
     </div>
   )
 }
