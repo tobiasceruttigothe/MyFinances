@@ -2,17 +2,19 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { User, Mail, Globe, Settings } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { authApi } from '@/api/auth'
 import { useAuthStore } from '@/stores/authStore'
 import { useToast } from '@/components/ui/toast'
-import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 
 const CURRENCIES = ['USD', 'ARS', 'EUR', 'BRL', 'CLP', 'COP', 'MXN', 'PEN', 'UYU']
+const LANGUAGES: Array<[string, string]> = [
+  ['es', 'Español'],
+  ['en', 'English'],
+  ['pt', 'Português'],
+]
 
 const schema = z.object({
   firstName: z.string().min(1, 'Requerido').max(50),
@@ -26,7 +28,9 @@ type FormData = z.infer<typeof schema>
 export default function ProfilePage() {
   const qc = useQueryClient()
   const setUser = useAuthStore((s) => s.setUser)
+  const logout = useAuthStore((s) => s.logout)
   const toast = useToast()
+  const navigate = useNavigate()
 
   const { data: profile, isLoading } = useQuery({
     queryKey: ['profile'],
@@ -60,132 +64,132 @@ export default function ProfilePage() {
     onError: () => toast.error('Error al actualizar el perfil'),
   })
 
+  function handleLogout() {
+    logout()
+    navigate('/login')
+  }
+
   const initials = profile
     ? `${profile.firstName?.[0] ?? ''}${profile.lastName?.[0] ?? ''}`.toUpperCase()
-    : '?'
+    : '·'
 
   return (
-    <div className="max-w-2xl space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Mi perfil</h1>
-        <p className="text-gray-500 text-sm mt-0.5">Administrá tu información personal y preferencias</p>
+    <div className="space-y-6">
+      <div className="flex items-baseline justify-between gap-4 flex-wrap">
+        <div>
+          <div className="text-[11px] tracking-[0.2em] uppercase text-sepia font-semibold">Perfil</div>
+          <h1 className="font-serif font-normal text-[36px] leading-[1.05] tracking-tight mt-1">
+            Hola, <em className="text-sepia">{profile?.firstName ?? '…'}.</em>
+          </h1>
+        </div>
+        <button
+          onClick={handleLogout}
+          className="border border-rule rounded-sm px-[18px] py-[11px] text-[13.5px] text-ink hover:bg-sepia-soft transition-colors font-semibold"
+        >
+          Cerrar sesión
+        </button>
       </div>
 
-      {/* Avatar + info header */}
-      {isLoading ? (
-        <div className="flex items-center gap-4 p-6 bg-white rounded-xl border border-gray-100 shadow-sm">
-          <Skeleton className="w-16 h-16 rounded-full" />
-          <div className="space-y-2">
-            <Skeleton className="h-5 w-40" />
-            <Skeleton className="h-4 w-56" />
-          </div>
-        </div>
-      ) : (
-        <div className="flex items-center gap-4 p-6 bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl shadow-sm">
-          <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
-            <span className="text-2xl font-bold text-white">{initials}</span>
-          </div>
-          <div>
-            <p className="text-lg font-bold text-white">
-              {profile?.firstName} {profile?.lastName}
-            </p>
-            <div className="flex items-center gap-1.5 text-blue-200 text-sm mt-0.5">
-              <Mail className="w-3.5 h-3.5" />
-              {profile?.email}
-            </div>
-            <div className="flex items-center gap-1.5 text-blue-200 text-xs mt-1">
-              <User className="w-3 h-3" />
-              @{profile?.username}
-            </div>
-          </div>
-        </div>
-      )}
+      <div className="grid grid-cols-1 md:grid-cols-[280px_1fr] gap-[22px]">
+        <aside className="border border-rule rounded-md bg-paper/40 backdrop-blur-[2px] p-[22px]">
+          {isLoading ? (
+            <>
+              <Skeleton className="w-20 h-20 rounded-full mb-4" />
+              <Skeleton className="h-5 w-32 mb-2" />
+              <Skeleton className="h-4 w-44" />
+            </>
+          ) : (
+            <>
+              <div className="w-20 h-20 rounded-full bg-ink text-paper flex items-center justify-center font-serif italic text-[32px] mb-4">
+                {initials}
+              </div>
+              <div className="font-serif text-[22px] tracking-tight">
+                {profile?.firstName} {profile?.lastName}
+              </div>
+              <div className="text-[12.5px] text-sepia mt-0.5">{profile?.email}</div>
+              {profile?.username && (
+                <div className="font-mono text-[11px] text-sepia mt-1">@{profile.username}</div>
+              )}
 
-      {/* Form */}
-      <Card className="border-gray-100 shadow-sm">
-        <CardHeader className="pb-3 border-b border-gray-100">
-          <CardTitle className="text-base font-semibold text-gray-900 flex items-center gap-2">
-            <User className="w-4 h-4 text-gray-500" />
-            Información personal
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-5">
+              <div className="mt-5 pt-4 border-t border-dashed border-rule flex flex-col gap-2.5">
+                {[
+                  ['Moneda', profile?.currency ?? '—'],
+                  ['Zona horaria', profile?.timezone ?? '—'],
+                  ['Idioma', LANGUAGES.find(([code]) => code === profile?.language)?.[1] ?? profile?.language ?? '—'],
+                ].map(([label, value]) => (
+                  <div key={label} className="flex items-baseline justify-between gap-3">
+                    <span className="text-[11.5px] text-sepia tracking-wide">{label}</span>
+                    <span className="font-serif italic text-[13px] text-right truncate">{value}</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </aside>
+
+        <section className="border border-rule rounded-md bg-paper/40 backdrop-blur-[2px] p-[22px]">
+          <h2 className="font-serif italic font-medium text-[19px] mb-5">Información personal</h2>
+
           {isLoading ? (
             <div className="space-y-4">
               {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-9" />)}
             </div>
           ) : (
-            <form onSubmit={handleSubmit((d) => mutation.mutate(d))} className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label className="text-gray-700 font-medium">Nombre</Label>
-                  <Input className="bg-white border-gray-200" {...register('firstName')} />
-                  {errors.firstName && <p className="text-xs text-red-500">{errors.firstName.message}</p>}
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-gray-700 font-medium">Apellido</Label>
-                  <Input className="bg-white border-gray-200" {...register('lastName')} />
-                  {errors.lastName && <p className="text-xs text-red-500">{errors.lastName.message}</p>}
-                </div>
+            <form onSubmit={handleSubmit((d) => mutation.mutate(d))} className="grid grid-cols-2 gap-5">
+              <div>
+                <Input label="Nombre" {...register('firstName')} />
+                {errors.firstName && <p className="font-serif italic text-[12px] text-wine mt-1">{errors.firstName.message}</p>}
+              </div>
+              <div>
+                <Input label="Apellido" {...register('lastName')} />
+                {errors.lastName && <p className="font-serif italic text-[12px] text-wine mt-1">{errors.lastName.message}</p>}
               </div>
 
-              <div className="space-y-1.5">
-                <Label className="text-gray-700 font-medium flex items-center gap-1.5">
-                  <Globe className="w-3.5 h-3.5 text-gray-400" />
-                  Moneda
-                </Label>
+              <div className="flex flex-col">
+                <span className="text-[10.5px] uppercase tracking-[0.14em] text-sepia font-semibold mb-1.5">Moneda</span>
                 <select
-                  className="flex h-9 w-full rounded-md border border-gray-200 bg-white px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-500"
+                  className="font-serif text-[17px] bg-transparent outline-none px-0 py-1.5 border-b border-rule focus:border-ink transition-colors"
                   {...register('currency')}
                 >
                   {CURRENCIES.map((c) => (
                     <option key={c} value={c}>{c}</option>
                   ))}
                 </select>
-                {errors.currency && <p className="text-xs text-red-500">{errors.currency.message}</p>}
               </div>
 
-              <div className="space-y-1.5">
-                <Label className="text-gray-700 font-medium flex items-center gap-1.5">
-                  <Settings className="w-3.5 h-3.5 text-gray-400" />
-                  Zona horaria
-                </Label>
-                <Input
-                  className="bg-white border-gray-200"
-                  placeholder="ej. America/Argentina/Buenos_Aires"
-                  {...register('timezone')}
-                />
-                {errors.timezone && <p className="text-xs text-red-500">{errors.timezone.message}</p>}
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-gray-700 font-medium">Idioma</Label>
+              <div className="flex flex-col">
+                <span className="text-[10.5px] uppercase tracking-[0.14em] text-sepia font-semibold mb-1.5">Idioma</span>
                 <select
-                  className="flex h-9 w-full rounded-md border border-gray-200 bg-white px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-500"
+                  className="font-serif text-[17px] bg-transparent outline-none px-0 py-1.5 border-b border-rule focus:border-ink transition-colors"
                   {...register('language')}
                 >
-                  <option value="es">Español</option>
-                  <option value="en">English</option>
-                  <option value="pt">Português</option>
+                  {LANGUAGES.map(([code, label]) => (
+                    <option key={code} value={code}>{label}</option>
+                  ))}
                 </select>
               </div>
 
-              <div className="flex items-center gap-3 pt-2">
-                <Button
+              <div className="col-span-2">
+                <Input label="Zona horaria" placeholder="ej. America/Argentina/Buenos_Aires" {...register('timezone')} />
+                {errors.timezone && <p className="font-serif italic text-[12px] text-wine mt-1">{errors.timezone.message}</p>}
+              </div>
+
+              <div className="col-span-2 flex items-center gap-3 pt-2">
+                <button
                   type="submit"
                   disabled={isSubmitting || !isDirty}
-                  className="bg-blue-600 hover:bg-blue-700"
+                  className="inline-flex items-center gap-2 bg-ink text-paper rounded-pill px-[18px] py-[11px] text-[13.5px] font-semibold leading-none disabled:opacity-50"
                 >
                   {isSubmitting ? 'Guardando…' : 'Guardar cambios'}
-                </Button>
+                </button>
                 {!isDirty && (
-                  <p className="text-xs text-gray-400">Sin cambios pendientes</p>
+                  <p className="font-serif italic text-[12px] text-sepia">Sin cambios pendientes.</p>
                 )}
               </div>
             </form>
           )}
-        </CardContent>
-      </Card>
+        </section>
+      </div>
     </div>
   )
 }
