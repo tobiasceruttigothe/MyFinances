@@ -1,26 +1,28 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
-import {
-  LayoutDashboard,
-  ArrowLeftRight,
-  Tag,
-  BarChart3,
-  TrendingUp,
-  Target,
-  User,
-  LogOut,
-  ChevronRight,
-} from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { cn } from '@/lib/utils'
 
-const navItems = [
-  { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { to: '/transactions', label: 'Transacciones', icon: ArrowLeftRight },
-  { to: '/categories', label: 'Categorías', icon: Tag },
-  { to: '/reports', label: 'Reportes', icon: BarChart3 },
-  { to: '/investments', label: 'Inversiones', icon: TrendingUp },
-  { to: '/goals', label: 'Metas', icon: Target },
+const mainItems = [
+  { to: '/dashboard',    label: 'Hoy' },
+  { to: '/transactions', label: 'Transacciones' },
+  { to: '/categories',   label: 'Categorías' },
+  { to: '/reports',      label: 'Reportes' },
+  { to: '/goals',        label: 'Metas' },
 ]
+
+const asideItems = [
+  { to: '/investments', label: 'Inversiones' },
+]
+
+function navItemClass(isActive: boolean) {
+  return cn(
+    'flex items-center gap-2 px-2.5 py-2 rounded-xs font-serif text-[17px] leading-none tracking-tight',
+    'transition-colors',
+    isActive
+      ? 'bg-ink text-paper italic'
+      : 'text-ink hover:bg-sepia-soft',
+  )
+}
 
 export default function AppLayout() {
   const { user, logout } = useAuthStore()
@@ -31,93 +33,68 @@ export default function AppLayout() {
     navigate('/login')
   }
 
-  const initials = user
-    ? `${user.firstName?.[0] ?? ''}${user.lastName?.[0] ?? ''}`.toUpperCase()
-    : '?'
-
   return (
-    <div className="flex h-screen bg-gray-50">
-      {/* Sidebar */}
-      <aside className="w-60 flex flex-col bg-white border-r border-gray-100 shadow-sm">
-        {/* Logo */}
-        <div className="flex items-center gap-2.5 px-5 py-5 border-b border-gray-100">
-          <div className="flex items-center justify-center w-8 h-8 bg-blue-600 rounded-lg shadow-sm shadow-blue-200">
-            <TrendingUp className="w-4 h-4 text-white" />
+    <div className="flex h-screen text-ink">
+      <aside className="w-56 flex flex-col px-[22px] py-7 border-r border-rule flex-shrink-0">
+        <div>
+          <div className="font-serif font-medium text-[22px] tracking-tight leading-none">
+            MyFinances<span className="text-wine">.</span>
           </div>
-          <div>
-            <span className="font-bold text-gray-900 text-base tracking-tight">MyFinances</span>
-            <p className="text-[10px] text-gray-400 leading-none mt-0.5">Panel de control</p>
+          <div className="text-[10.5px] tracking-[0.16em] uppercase text-sepia mt-1 font-semibold">
+            Cuaderno de cuentas
           </div>
         </div>
 
-        {/* Navigation */}
-        <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
-          {navItems.map(({ to, label, icon: Icon }) => (
-            <NavLink
-              key={to}
-              to={to}
-              className={({ isActive }) =>
-                cn(
-                  'group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150',
-                  isActive
-                    ? 'bg-blue-600 text-white shadow-sm shadow-blue-200'
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                )
-              }
-            >
+        <nav className="mt-9 flex flex-col gap-0.5">
+          {mainItems.map(({ to, label }) => (
+            <NavLink key={to} to={to} className={({ isActive }) => navItemClass(isActive)}>
               {({ isActive }) => (
                 <>
-                  <Icon className={cn('w-4 h-4 flex-shrink-0', isActive ? 'text-white' : 'text-gray-400 group-hover:text-gray-600')} />
-                  <span className="flex-1">{label}</span>
-                  {isActive && <ChevronRight className="w-3 h-3 text-blue-300" />}
+                  {isActive && <span className="text-[11px]">❧</span>}
+                  <span>{label}</span>
+                </>
+              )}
+            </NavLink>
+          ))}
+
+          <div className="h-px bg-rule my-2.5" />
+
+          {asideItems.map(({ to, label }) => (
+            <NavLink key={to} to={to} className={({ isActive }) => navItemClass(isActive)}>
+              {({ isActive }) => (
+                <>
+                  {isActive && <span className="text-[11px]">❧</span>}
+                  <span>{label}</span>
                 </>
               )}
             </NavLink>
           ))}
         </nav>
 
-        {/* User section */}
-        <div className="border-t border-gray-100 p-3 space-y-1">
-          <NavLink
-            to="/profile"
-            className={({ isActive }) =>
-              cn(
-                'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150',
-                isActive
-                  ? 'bg-gray-100 text-gray-900'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-              )
-            }
-          >
-            <div className="w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
-              {user?.firstName ? (
-                <span className="text-xs font-bold text-blue-700">{initials}</span>
-              ) : (
-                <User className="w-3.5 h-3.5 text-blue-600" />
-              )}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-900 truncate">
-                {user ? `${user.firstName} ${user.lastName}` : 'Perfil'}
-              </p>
-              {user?.email && (
-                <p className="text-[10px] text-gray-400 truncate">{user.email}</p>
-              )}
-            </div>
+        <div className="mt-auto pt-6 flex flex-col gap-1">
+          <NavLink to="/profile" className={({ isActive }) => navItemClass(isActive)}>
+            {({ isActive }) => (
+              <>
+                {isActive && <span className="text-[11px]">❧</span>}
+                <span>{user ? `${user.firstName} ${user.lastName}` : 'Perfil'}</span>
+              </>
+            )}
           </NavLink>
           <button
             onClick={handleLogout}
-            className="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm font-medium text-gray-500 hover:bg-red-50 hover:text-red-600 transition-all duration-150"
+            className="text-left px-2.5 py-2 rounded-xs font-serif italic text-[15px] text-sepia hover:text-wine transition-colors"
           >
-            <LogOut className="w-4 h-4 flex-shrink-0" />
             Cerrar sesión
           </button>
+
+          <p className="mt-6 font-serif italic text-[11.5px] leading-snug text-sepia">
+            «Quien no sabe lo que gasta, ignora lo que vale.»
+          </p>
         </div>
       </aside>
 
-      {/* Main content */}
       <main className="flex-1 overflow-auto">
-        <div className="p-8 max-w-7xl mx-auto">
+        <div className="px-11 py-8 max-w-7xl">
           <Outlet />
         </div>
       </main>
