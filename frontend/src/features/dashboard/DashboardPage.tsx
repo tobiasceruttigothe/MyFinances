@@ -1,46 +1,29 @@
 import { useQuery } from '@tanstack/react-query'
-import { TrendingUp, TrendingDown, Wallet, Activity, ArrowRight, Target, ArrowLeftRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { transactionsApi } from '@/api/transactions'
 import { reportsApi } from '@/api/reports'
 import { goalsApi } from '@/api/goals'
 import { useAuthStore } from '@/stores/authStore'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { CardSkeleton, TableRowSkeleton } from '@/components/ui/skeleton'
-import { formatCurrency, formatDate, currentYearMonth } from '@/lib/utils'
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
-import { cn } from '@/lib/utils'
+import { formatCurrency, currentYearMonth, cn } from '@/lib/utils'
 
-const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899']
+const WEEKDAYS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
+const MONTHS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
 
-interface SummaryCardProps {
-  title: string
-  value: string
-  icon: React.ElementType
-  iconColor: string
-  iconBg: string
-  highlight?: boolean
+function fullDateLabel(d = new Date()) {
+  return `${WEEKDAYS[d.getDay()]} · ${d.getDate()} de ${MONTHS[d.getMonth()]}, ${d.getFullYear()}`
 }
 
-function SummaryCard({ title, value, icon: Icon, iconColor, iconBg, highlight }: SummaryCardProps) {
-  return (
-    <Card className={cn('border-gray-100 shadow-sm', highlight && 'border-blue-200 bg-gradient-to-br from-blue-600 to-blue-700')}>
-      <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle className={cn('text-sm font-medium', highlight ? 'text-blue-200' : 'text-gray-500')}>
-          {title}
-        </CardTitle>
-        <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center', highlight ? 'bg-white/20' : iconBg)}>
-          <Icon className={cn('w-4 h-4', highlight ? 'text-white' : iconColor)} />
-        </div>
-      </CardHeader>
-      <CardContent>
-        <p className={cn('text-2xl font-bold', highlight ? 'text-white' : 'text-gray-900')}>
-          {value}
-        </p>
-      </CardContent>
-    </Card>
-  )
+function shortDate(iso: string) {
+  const d = new Date(iso)
+  return `${String(d.getDate()).padStart(2, '0')} ${MONTHS[d.getMonth()].slice(0, 3)}`
+}
+
+function greeting() {
+  const h = new Date().getHours()
+  if (h < 12) return 'Buenos días'
+  if (h < 18) return 'Buenas tardes'
+  return 'Buenas noches'
 }
 
 export default function DashboardPage() {
@@ -68,30 +51,33 @@ export default function DashboardPage() {
   })
 
   const inProgressGoals = goals?.filter((g) => g.status === 'IN_PROGRESS').slice(0, 3) ?? []
+  const topCategories = monthly?.expensesByCategory.slice(0, 6) ?? []
+  const maxCategory = topCategories[0]?.totalAmount ?? 1
 
-  const pieData =
-    monthly?.expensesByCategory
-      .slice(0, 6)
-      .map((c) => ({ name: c.categoryName, value: c.totalAmount })) ?? []
-
-  const greeting = () => {
-    const h = new Date().getHours()
-    if (h < 12) return 'Buenos días'
-    if (h < 18) return 'Buenas tardes'
-    return 'Buenas noches'
-  }
+  const income = monthly?.totalIncome ?? 0
+  const expense = monthly?.totalExpense ?? 0
+  const maxBar = Math.max(income, expense, 1)
+  const net = monthly?.balance ?? 0
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">
-          {greeting()}, {user?.firstName ?? 'allí'} 👋
-        </h1>
-        <p className="text-gray-500 text-sm mt-1">Acá está tu resumen financiero actualizado</p>
+    <div className="space-y-6">
+      <div className="flex items-baseline justify-between gap-4 flex-wrap">
+        <div>
+          <div className="text-[11px] tracking-[0.2em] uppercase text-sepia font-semibold">
+            {fullDateLabel()}
+          </div>
+          <h1 className="font-serif font-normal text-[40px] leading-[1.05] tracking-tight mt-1.5">
+            {greeting()}, <em className="text-sepia not-italic font-medium font-serif italic">{user?.firstName ?? 'allí'}.</em>
+          </h1>
+        </div>
+        <Link
+          to="/transactions"
+          className="inline-flex items-center gap-2 bg-ink text-paper rounded-pill px-[18px] py-[11px] text-[13.5px] font-semibold leading-none"
+        >
+          <span className="text-base leading-none">+</span> Anotar un gasto
+        </Link>
       </div>
 
-      {/* Summary cards */}
       {loadingSummary ? (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <CardSkeleton />
@@ -99,204 +85,230 @@ export default function DashboardPage() {
           <CardSkeleton />
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <SummaryCard
-            title="Balance de cuenta"
+        <div className="grid grid-cols-1 md:grid-cols-[1.2fr_1fr_1.2fr] border border-rule rounded-md bg-paper/40 backdrop-blur-[2px] overflow-hidden">
+          <StatCell
+            label="En cuenta"
             value={formatCurrency(summary?.accountBalance ?? 0, user?.currency)}
-            icon={Wallet}
-            iconColor="text-blue-600"
-            iconBg="bg-blue-50"
           />
-          <SummaryCard
-            title="Inversiones"
+          <StatCell
+            label="Invertido"
             value={formatCurrency(summary?.investments ?? 0, user?.currency)}
-            icon={TrendingUp}
-            iconColor="text-emerald-600"
-            iconBg="bg-emerald-50"
+            withLeftRule
           />
-          <SummaryCard
-            title="Patrimonio neto"
+          <StatCell
+            label="Patrimonio neto"
             value={formatCurrency(summary?.netWorth ?? 0, user?.currency)}
-            icon={Activity}
-            iconColor="text-violet-600"
-            iconBg="bg-violet-50"
-            highlight
+            primary
+            withLeftRule
           />
         </div>
       )}
 
-      {/* Monthly stats + pie */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <Card className="border-gray-100 shadow-sm">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-semibold text-gray-700">Este mes</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between p-3 bg-emerald-50 rounded-lg">
-              <div className="flex items-center gap-2">
-                <TrendingUp className="w-4 h-4 text-emerald-600" />
-                <span className="text-sm font-medium text-emerald-700">Ingresos</span>
-              </div>
-              <span className="font-bold text-emerald-700">{formatCurrency(monthly?.totalIncome ?? 0, user?.currency)}</span>
-            </div>
-            <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
-              <div className="flex items-center gap-2">
-                <TrendingDown className="w-4 h-4 text-red-500" />
-                <span className="text-sm font-medium text-red-600">Gastos</span>
-              </div>
-              <span className="font-bold text-red-600">{formatCurrency(monthly?.totalExpense ?? 0, user?.currency)}</span>
-            </div>
-            <div className="flex items-center justify-between pt-1 border-t border-gray-100">
-              <span className="text-sm font-semibold text-gray-700">Balance neto</span>
-              <span className={cn('text-base font-bold', (monthly?.balance ?? 0) >= 0 ? 'text-emerald-600' : 'text-red-500')}>
-                {formatCurrency(monthly?.balance ?? 0, user?.currency)}
-              </span>
-            </div>
-            {monthly && (
-              <div className="flex items-center justify-between text-xs text-gray-400">
-                <span>Tasa de ahorro</span>
-                <span className="font-medium text-gray-600">{monthly.savingsRate.toFixed(1)}%</span>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-[18px]">
+        <section className="border border-rule rounded-md bg-paper/40 backdrop-blur-[2px] p-[18px_22px]">
+          <SectionTitle title="Mes en curso" right={MONTHS[month - 1]?.toUpperCase()} />
 
-        <Card className="border-gray-100 shadow-sm">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-semibold text-gray-700">Gastos por categoría</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {pieData.length > 0 ? (
-              <div className="flex items-center gap-4">
-                <ResponsiveContainer width={130} height={130}>
-                  <PieChart>
-                    <Pie data={pieData} cx="50%" cy="50%" innerRadius={38} outerRadius={60} dataKey="value" paddingAngle={3}>
-                      {pieData.map((_, i) => (
-                        <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      formatter={(v) => formatCurrency(v as number, user?.currency)}
-                      contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb', fontSize: '12px' }}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className="flex-1 space-y-2">
-                  {pieData.map((d, i) => (
-                    <div key={i} className="flex items-center gap-2 text-xs">
-                      <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
-                      <span className="truncate text-gray-600 flex-1">{d.name}</span>
-                      <span className="text-gray-400 font-medium">{formatCurrency(d.value, user?.currency)}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-8 text-center">
-                <Activity className="w-8 h-8 text-gray-200 mb-2" />
-                <p className="text-sm text-gray-400">Sin gastos este mes</p>
-                <Link to="/transactions" className="mt-2 text-xs text-blue-500 hover:underline flex items-center gap-1">
-                  Registrar transacción <ArrowRight className="w-3 h-3" />
-                </Link>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+          <div className="flex flex-col gap-2.5">
+            <BarRow label="Ingresos" amount={income} max={maxBar} tone="sage" currency={user?.currency} />
+            <BarRow label="Gastos" amount={expense} max={maxBar} tone="wine" currency={user?.currency} />
+          </div>
 
-      {/* Recent transactions + goals */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <Card className="border-gray-100 shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between pb-3">
-            <CardTitle className="text-sm font-semibold text-gray-700">Transacciones recientes</CardTitle>
-            <Link to="/transactions" className="text-xs text-blue-500 hover:text-blue-600 flex items-center gap-0.5 font-medium">
-              Ver todo <ArrowRight className="w-3 h-3" />
-            </Link>
-          </CardHeader>
-          <CardContent className="p-0 pb-2">
-            {loadingRecent ? (
-              <div className="divide-y divide-gray-50">
-                {[...Array(4)].map((_, i) => <TableRowSkeleton key={i} />)}
-              </div>
-            ) : recent && recent.length > 0 ? (
-              <div className="divide-y divide-gray-50">
-                {recent.slice(0, 6).map((t) => (
-                  <div key={t.id} className="flex items-center px-5 py-3 hover:bg-gray-50/50 transition-colors">
-                    <div
-                      className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mr-3"
-                      style={{ backgroundColor: t.type === 'INCOME' ? '#d1fae5' : '#fee2e2' }}
-                    >
-                      {t.type === 'INCOME'
-                        ? <TrendingUp className="w-3.5 h-3.5 text-emerald-600" />
-                        : <TrendingDown className="w-3.5 h-3.5 text-red-500" />}
+          <div className="border-t border-dashed border-rule mt-3.5 pt-3 flex items-baseline justify-between">
+            <span className="text-[12.5px] text-sepia font-semibold tracking-wide">Balance neto</span>
+            <span className={cn('font-serif text-[24px]', net >= 0 ? 'text-sage' : 'text-wine')}>
+              {net >= 0 ? '+ ' : '− '}
+              {formatCurrency(Math.abs(net), user?.currency)}
+            </span>
+          </div>
+          {monthly && (
+            <div className="flex items-baseline justify-between mt-1">
+              <span className="text-[11px] text-sepia tracking-wide">Tasa de ahorro</span>
+              <span className="font-serif italic text-[11.5px]">{monthly.savingsRate.toFixed(0)} %</span>
+            </div>
+          )}
+        </section>
+
+        <section className="border border-rule rounded-md bg-paper/40 backdrop-blur-[2px] p-[18px_22px]">
+          <SectionTitle title="Dónde se fue" right="TOP 6" />
+
+          {topCategories.length > 0 ? (
+            <div className="flex flex-col gap-2">
+              {topCategories.map((c) => {
+                const pct = (c.totalAmount / maxCategory) * 100
+                return (
+                  <div
+                    key={c.categoryName}
+                    className="grid grid-cols-[110px_1fr_86px] gap-3 items-center"
+                  >
+                    <span className="font-serif text-[13px] truncate">{c.categoryName}</span>
+                    <div className="h-1 bg-sepia-soft rounded-pill overflow-hidden">
+                      <div className="h-full bg-ink" style={{ width: `${pct}%` }} />
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">{t.description}</p>
-                      <p className="text-xs text-gray-400">{formatDate(t.date)}</p>
-                    </div>
-                    <span className={cn('text-sm font-bold ml-3', t.type === 'INCOME' ? 'text-emerald-600' : 'text-red-500')}>
-                      {t.type === 'INCOME' ? '+' : '-'}{formatCurrency(t.amount, user?.currency)}
+                    <span className="font-mono text-[12.5px] text-right text-ink">
+                      {formatCurrency(c.totalAmount, user?.currency)}
                     </span>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-10 text-center">
-                <ArrowLeftRight className="w-8 h-8 text-gray-200 mb-2" />
-                <p className="text-sm text-gray-400">Sin transacciones aún</p>
-                <Link to="/transactions" className="mt-2 text-xs text-blue-500 hover:underline flex items-center gap-1">
-                  Crear primera <ArrowRight className="w-3 h-3" />
-                </Link>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                )
+              })}
+            </div>
+          ) : (
+            <p className="font-serif italic text-sepia text-[15px] py-6">
+              Sin gastos este mes — la página está en blanco.
+            </p>
+          )}
+        </section>
+      </div>
 
-        <Card className="border-gray-100 shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between pb-3">
-            <CardTitle className="text-sm font-semibold text-gray-700">Metas en progreso</CardTitle>
-            <Link to="/goals" className="text-xs text-blue-500 hover:text-blue-600 flex items-center gap-0.5 font-medium">
-              Ver todo <ArrowRight className="w-3 h-3" />
-            </Link>
-          </CardHeader>
-          <CardContent>
-            {inProgressGoals.length > 0 ? (
-              <div className="space-y-5">
-                {inProgressGoals.map((g) => (
-                  <div key={g.id}>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium text-gray-900 flex items-center gap-1.5">
-                        <span>{g.icon ?? '🎯'}</span>
-                        {g.name}
-                      </span>
-                      <Badge variant="secondary" className="text-xs font-semibold">
-                        {g.progressPercentage.toFixed(0)}%
-                      </Badge>
-                    </div>
-                    <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-gradient-to-r from-blue-500 to-blue-400 rounded-full transition-all duration-500"
-                        style={{ width: `${Math.min(g.progressPercentage, 100)}%` }}
-                      />
-                    </div>
-                    <div className="flex justify-between mt-1.5">
-                      <span className="text-xs text-gray-400">{formatCurrency(g.currentAmount, user?.currency)}</span>
-                      <span className="text-xs text-gray-400">{formatCurrency(g.targetAmount, user?.currency)}</span>
-                    </div>
-                  </div>
-                ))}
+      <section className="border border-rule rounded-md bg-paper/40 backdrop-blur-[2px]">
+        <div className="flex items-baseline justify-between px-[22px] py-3.5 border-b border-rule">
+          <h2 className="font-serif italic font-medium text-[19px]">Movimientos recientes</h2>
+          <Link to="/transactions" className="text-[11.5px] text-sepia underline underline-offset-[3px] hover:text-ink transition-colors">
+            Ver todo →
+          </Link>
+        </div>
+        <div>
+          {loadingRecent ? (
+            <>{[...Array(4)].map((_, i) => <TableRowSkeleton key={i} />)}</>
+          ) : recent && recent.length > 0 ? (
+            recent.slice(0, 6).map((t, i, arr) => (
+              <div
+                key={t.id}
+                className={cn(
+                  'grid grid-cols-[110px_1fr_140px_130px] gap-4 items-center px-[22px] py-3',
+                  i < arr.length - 1 && 'border-b border-rule-soft',
+                )}
+              >
+                <span className="font-mono text-[11.5px] text-sepia">{shortDate(t.date)}</span>
+                <span className="font-serif text-base truncate">{t.description}</span>
+                <span className="text-[11.5px] text-sepia tracking-wide truncate">
+                  {t.categoryName ?? '—'}
+                </span>
+                <span className={cn('font-serif text-[18px] text-right', t.type === 'INCOME' ? 'text-sage' : 'text-ink')}>
+                  {t.type === 'INCOME' ? '+ ' : '− '}
+                  {formatCurrency(t.amount, user?.currency)}
+                </span>
               </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-10 text-center">
-                <Target className="w-8 h-8 text-gray-200 mb-2" />
-                <p className="text-sm text-gray-400">Sin metas activas</p>
-                <Link to="/goals" className="mt-2 text-xs text-blue-500 hover:underline flex items-center gap-1">
-                  Crear meta <ArrowRight className="w-3 h-3" />
-                </Link>
+            ))
+          ) : (
+            <p className="font-serif italic text-sepia text-[15px] px-[22px] py-8">
+              Sin transacciones aún. <Link to="/transactions" className="underline underline-offset-[3px] hover:text-ink">Anotá la primera →</Link>
+            </p>
+          )}
+        </div>
+      </section>
+
+      <section className="border border-rule rounded-md bg-paper/40 backdrop-blur-[2px] p-[22px]">
+        <div className="flex items-baseline justify-between mb-3.5">
+          <h2 className="font-serif italic font-medium text-[19px]">Metas en progreso</h2>
+          <Link to="/goals" className="text-[11.5px] text-sepia underline underline-offset-[3px] hover:text-ink transition-colors">
+            Ver todo →
+          </Link>
+        </div>
+        {inProgressGoals.length > 0 ? (
+          <div className="space-y-5">
+            {inProgressGoals.map((g) => (
+              <div key={g.id}>
+                <div className="flex items-baseline justify-between mb-1.5">
+                  <span className="font-serif text-base flex items-center gap-2">
+                    <span className="text-sepia">{g.icon ?? '◇'}</span>
+                    {g.name}
+                  </span>
+                  <span className="font-serif italic text-[14px] text-sepia">
+                    {g.progressPercentage.toFixed(0)} %
+                  </span>
+                </div>
+                <div className="h-1.5 bg-sepia-soft rounded-pill overflow-hidden">
+                  <div
+                    className="h-full bg-ink transition-all duration-500"
+                    style={{ width: `${Math.min(g.progressPercentage, 100)}%` }}
+                  />
+                </div>
+                <div className="flex justify-between mt-1">
+                  <span className="font-mono text-[11px] text-sepia">{formatCurrency(g.currentAmount, user?.currency)}</span>
+                  <span className="font-mono text-[11px] text-sepia">{formatCurrency(g.targetAmount, user?.currency)}</span>
+                </div>
               </div>
-            )}
-          </CardContent>
-        </Card>
+            ))}
+          </div>
+        ) : (
+          <p className="font-serif italic text-sepia text-[15px]">
+            Sin metas activas. <Link to="/goals" className="underline underline-offset-[3px] hover:text-ink">Crear la primera →</Link>
+          </p>
+        )}
+      </section>
+    </div>
+  )
+}
+
+function StatCell({
+  label,
+  value,
+  primary,
+  withLeftRule,
+}: {
+  label: string
+  value: string
+  primary?: boolean
+  withLeftRule?: boolean
+}) {
+  return (
+    <div
+      className={cn(
+        'p-[20px_24px]',
+        withLeftRule && 'md:border-l border-rule',
+        primary && 'bg-ink/[0.04]',
+      )}
+    >
+      <div className="text-[11px] tracking-[0.18em] uppercase text-sepia font-semibold">{label}</div>
+      <div
+        className={cn(
+          'font-serif font-normal mt-1.5 leading-none tracking-tight',
+          primary ? 'text-[36px]' : 'text-[30px]',
+        )}
+      >
+        {value}
+      </div>
+    </div>
+  )
+}
+
+function SectionTitle({ title, right }: { title: string; right?: string }) {
+  return (
+    <div className="flex items-baseline justify-between mb-3.5">
+      <h2 className="font-serif italic font-medium text-[19px]">{title}</h2>
+      {right && (
+        <span className="text-[11px] text-sepia tracking-[0.14em] uppercase">{right}</span>
+      )}
+    </div>
+  )
+}
+
+function BarRow({
+  label,
+  amount,
+  max,
+  tone,
+  currency,
+}: {
+  label: string
+  amount: number
+  max: number
+  tone: 'sage' | 'wine'
+  currency?: string
+}) {
+  const pct = max > 0 ? (amount / max) * 100 : 0
+  const colorClass = tone === 'sage' ? 'bg-sage text-sage' : 'bg-wine text-wine'
+  const [barBg, textColor] = colorClass.split(' ')
+  return (
+    <div>
+      <div className="flex items-baseline justify-between mb-1">
+        <span className="text-[12.5px] font-semibold tracking-wide">{label}</span>
+        <span className={cn('font-serif text-[17px]', textColor)}>
+          {formatCurrency(amount, currency)}
+        </span>
+      </div>
+      <div className="h-1.5 bg-sepia-soft rounded-pill overflow-hidden">
+        <div className={cn('h-full', barBg)} style={{ width: `${pct}%` }} />
       </div>
     </div>
   )
