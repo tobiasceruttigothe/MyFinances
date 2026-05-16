@@ -3,17 +3,12 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Plus, Trash2, Pencil, X, Tag, ArrowRight } from 'lucide-react'
+import { X, Pencil, Trash2 } from 'lucide-react'
 import { categoriesApi } from '@/api/categories'
 import { useToast } from '@/components/ui/toast'
 import type { Category, CreateCategoryRequest } from '@/types/category'
-import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { formatCurrency } from '@/lib/utils'
-import { cn } from '@/lib/utils'
+import { formatCurrency, cn } from '@/lib/utils'
 
 const schema = z.object({
   name: z.string().min(1, 'Requerido').max(50),
@@ -21,6 +16,11 @@ const schema = z.object({
   description: z.string().max(200).optional(),
 })
 type FormData = z.infer<typeof schema>
+
+const GLYPHS = ['◇', '◯', '◐', '✦', '❧', '☼', '✜', '※']
+function glyphFor(c: Category) {
+  return GLYPHS[c.id % GLYPHS.length]
+}
 
 export default function CategoriesPage() {
   const qc = useQueryClient()
@@ -87,187 +87,210 @@ export default function CategoriesPage() {
     else await createMutation.mutateAsync(data)
   }
 
-  const filtered = categories.filter((c) => c.type === tab)
+  const expenseList = categories.filter((c) => c.type === 'EXPENSE')
+  const incomeList = categories.filter((c) => c.type === 'INCOME')
+  const filtered = tab === 'EXPENSE' ? expenseList : incomeList
   const rootCategories = filtered.filter((c) => !c.parentId)
   const childCategories = filtered.filter((c) => !!c.parentId)
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-baseline justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Categorías</h1>
-          <p className="text-gray-500 text-sm mt-0.5">Organizá tus transacciones por categoría</p>
+          <div className="text-[11px] tracking-[0.2em] uppercase text-sepia font-semibold">
+            Categorías · {categories.length} activas
+          </div>
+          <h1 className="font-serif font-normal text-[36px] leading-[1.05] tracking-tight mt-1">
+            Tus <em className="text-sepia">etiquetas.</em>
+          </h1>
         </div>
-        <Button size="sm" onClick={() => { cancelForm(); setShowForm(true) }} className="gap-2 bg-blue-600 hover:bg-blue-700">
-          <Plus className="w-4 h-4" />
-          Nueva categoría
-        </Button>
+        <button
+          onClick={() => { cancelForm(); setShowForm(true) }}
+          className="inline-flex items-center gap-2 bg-ink text-paper rounded-pill px-[18px] py-[11px] text-[13.5px] font-semibold leading-none"
+        >
+          <span className="text-base leading-none">+</span> Nueva categoría
+        </button>
       </div>
 
       {showForm && (
-        <Card className="border-blue-200 shadow-md">
-          <CardHeader className="flex flex-row items-center justify-between pb-3 border-b border-gray-100">
-            <CardTitle className="text-base font-semibold text-gray-900">
+        <section className="border border-ink rounded-md bg-paper/60 backdrop-blur-[2px] p-[22px]">
+          <div className="flex items-baseline justify-between mb-4">
+            <h2 className="font-serif italic font-medium text-[19px]">
               {editing ? 'Editar categoría' : 'Nueva categoría'}
-            </CardTitle>
-            <button onClick={cancelForm} className="p-1 rounded-lg hover:bg-gray-100 text-gray-400 transition-colors">
+            </h2>
+            <button onClick={cancelForm} className="text-sepia hover:text-ink transition-colors" aria-label="Cerrar">
               <X className="w-4 h-4" />
             </button>
-          </CardHeader>
-          <CardContent className="pt-5">
-            <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label className="text-gray-700 font-medium">Nombre</Label>
-                <Input placeholder="ej. Supermercado" {...register('name')} />
-                {errors.name && <p className="text-xs text-red-500">{errors.name.message}</p>}
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-gray-700 font-medium">Tipo</Label>
-                <select
-                  className="flex h-9 w-full rounded-md border border-gray-200 bg-white px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-500"
-                  {...register('type')}
-                >
-                  <option value="EXPENSE">Gasto</option>
-                  <option value="INCOME">Ingreso</option>
-                </select>
-              </div>
-              <div className="col-span-2 space-y-1.5">
-                <Label className="text-gray-700 font-medium">Descripción (opcional)</Label>
-                <Input placeholder="Descripción breve" {...register('description')} />
-              </div>
-              <div className="col-span-2 flex gap-2 pt-1">
-                <Button type="submit" disabled={isSubmitting} className="bg-blue-600 hover:bg-blue-700">
-                  {isSubmitting ? 'Guardando…' : editing ? 'Actualizar' : 'Crear'}
-                </Button>
-                <Button type="button" variant="outline" onClick={cancelForm}>Cancelar</Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
+          </div>
+          <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-2 gap-5">
+            <div>
+              <Input label="Nombre" placeholder="ej. Supermercado" {...register('name')} />
+              {errors.name && <p className="font-serif italic text-[12px] text-wine mt-1">{errors.name.message}</p>}
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[10.5px] uppercase tracking-[0.14em] text-sepia font-semibold mb-1.5">Tipo</span>
+              <select
+                className="font-serif text-[17px] bg-transparent outline-none px-0 py-1.5 border-b border-rule focus:border-ink transition-colors"
+                {...register('type')}
+              >
+                <option value="EXPENSE">Gasto</option>
+                <option value="INCOME">Ingreso</option>
+              </select>
+            </div>
+            <div className="col-span-2">
+              <Input label="Descripción" placeholder="Detalle breve" {...register('description')} />
+            </div>
+            <div className="col-span-2 flex items-center gap-3 pt-2">
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="inline-flex items-center gap-2 bg-ink text-paper rounded-pill px-[18px] py-[11px] text-[13.5px] font-semibold leading-none disabled:opacity-50"
+              >
+                {isSubmitting ? 'Guardando…' : editing ? 'Actualizar' : 'Guardar ↵'}
+              </button>
+              <button
+                type="button"
+                onClick={cancelForm}
+                className="font-serif italic text-sepia hover:text-ink transition-colors text-[14px]"
+              >
+                Cancelar
+              </button>
+            </div>
+          </form>
+        </section>
       )}
 
-      {/* Tabs */}
-      <div className="flex gap-1.5 p-1 bg-gray-100 rounded-lg w-fit">
-        {(['EXPENSE', 'INCOME'] as const).map((t) => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={cn(
-              'px-4 py-1.5 rounded-md text-sm font-semibold transition-all',
-              tab === t ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
-            )}
-          >
-            {t === 'EXPENSE' ? 'Gastos' : 'Ingresos'}
-            <span className={cn('ml-2 text-xs px-1.5 py-0.5 rounded-full', tab === t ? 'bg-blue-100 text-blue-700' : 'bg-gray-200 text-gray-500')}>
-              {filtered.length}
-            </span>
-          </button>
-        ))}
+      <div className="flex items-baseline gap-0 border-b border-rule">
+        {([
+          ['EXPENSE', 'Gastos', expenseList.length] as const,
+          ['INCOME', 'Ingresos', incomeList.length] as const,
+        ]).map(([key, label, count]) => {
+          const active = tab === key
+          return (
+            <button
+              key={key}
+              onClick={() => setTab(key)}
+              className={cn(
+                'px-4 py-2.5 font-serif text-[15px] -mb-px border-b-2 flex items-baseline gap-2 transition-colors',
+                active
+                  ? 'italic text-ink border-ink'
+                  : 'text-sepia border-transparent hover:text-ink',
+              )}
+            >
+              {label}
+              <span className="font-mono text-[10.5px] text-sepia not-italic">{count}</span>
+            </button>
+          )
+        })}
       </div>
 
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {[...Array(6)].map((_, i) => (
-            <div key={i} className="h-20 rounded-xl bg-gray-100 animate-pulse" />
+            <div key={i} className="h-20 rounded-md bg-sepia-soft animate-pulse" />
           ))}
         </div>
       ) : filtered.length === 0 ? (
-        <Card className="border-gray-100 shadow-sm">
-          <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-            <Tag className="w-10 h-10 text-gray-200 mb-3" />
-            <p className="text-gray-500 font-medium">Sin categorías de {tab === 'EXPENSE' ? 'gastos' : 'ingresos'}</p>
-            <Button size="sm" className="mt-4 bg-blue-600 hover:bg-blue-700" onClick={() => { cancelForm(); setShowForm(true) }}>
-              <Plus className="w-3.5 h-3.5 mr-1" />
-              Crear categoría
-            </Button>
-          </CardContent>
-        </Card>
+        <p className="font-serif italic text-sepia text-[15px] text-center py-12">
+          Sin categorías de {tab === 'EXPENSE' ? 'gastos' : 'ingresos'} todavía.
+        </p>
       ) : (
-        <div className="space-y-4">
-          {/* Root categories */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {rootCategories.map((c) => {
-              const children = childCategories.filter((ch) => ch.parentId === c.id)
-              return (
-                <Card key={c.id} className="border-gray-100 shadow-sm hover:shadow-md transition-shadow">
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-gray-900">{c.name}</p>
-                        {c.description && <p className="text-xs text-gray-400 mt-0.5 truncate">{c.description}</p>}
-                        <div className="flex items-center gap-2 mt-2">
-                          <Badge variant="secondary" className="text-[11px]">
-                            {c.transactionCount} transacciones
-                          </Badge>
-                          <span className="text-xs font-medium text-gray-600">{formatCurrency(c.totalAmount)}</span>
-                        </div>
-                        {children.length > 0 && (
-                          <div className="mt-2 space-y-1">
-                            {children.map((ch) => (
-                              <div key={ch.id} className="flex items-center gap-1.5 text-xs text-gray-500">
-                                <ArrowRight className="w-3 h-3 text-gray-300" />
-                                <span>{ch.name}</span>
-                                <span className="text-gray-300">·</span>
-                                <span className="text-gray-400">{ch.transactionCount} trans.</span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex gap-1 ml-3 flex-shrink-0">
-                        <button
-                          onClick={() => startEdit(c)}
-                          className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors"
-                        >
-                          <Pencil className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={() => { if (window.confirm(`¿Eliminar "${c.name}"?`)) deleteMutation.mutate(c.id) }}
-                          className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              )
-            })}
+        <section className="border border-rule rounded-md bg-paper/40 backdrop-blur-[2px]">
+          <div className="grid grid-cols-[40px_1fr_90px_130px_70px] gap-3 px-[22px] py-3 border-b border-rule text-[11px] tracking-[0.16em] uppercase text-sepia font-semibold">
+            <span></span>
+            <span>Categoría</span>
+            <span className="text-right">Tx</span>
+            <span className="text-right">Total</span>
+            <span className="text-right">Acciones</span>
           </div>
 
-          {/* Orphan child categories (edge case) */}
-          {childCategories.filter((ch) => !rootCategories.find((r) => r.id === ch.parentId)).length > 0 && (
-            <div>
-              <p className="text-xs text-gray-400 mb-2 font-medium">Subcategorías</p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {childCategories
-                  .filter((ch) => !rootCategories.find((r) => r.id === ch.parentId))
-                  .map((c) => (
-                    <Card key={c.id} className="border-gray-100 shadow-sm">
-                      <CardContent className="flex items-center justify-between p-4">
-                        <div>
-                          <p className="font-medium text-gray-900">{c.name}</p>
-                          <Badge variant="secondary" className="text-[11px] mt-1">{c.transactionCount} trans.</Badge>
-                        </div>
-                        <div className="flex gap-1">
-                          <button onClick={() => startEdit(c)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors">
-                            <Pencil className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => { if (window.confirm(`¿Eliminar "${c.name}"?`)) deleteMutation.mutate(c.id) }}
-                            className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+          {rootCategories.map((c, i, arr) => {
+            const children = childCategories.filter((ch) => ch.parentId === c.id)
+            return (
+              <div key={c.id}>
+                <Row
+                  category={c}
+                  onEdit={() => startEdit(c)}
+                  onDelete={() => { if (window.confirm(`¿Eliminar "${c.name}"?`)) deleteMutation.mutate(c.id) }}
+                  isLast={i === arr.length - 1 && children.length === 0}
+                />
+                {children.map((ch, j) => (
+                  <Row
+                    key={ch.id}
+                    category={ch}
+                    indent
+                    onEdit={() => startEdit(ch)}
+                    onDelete={() => { if (window.confirm(`¿Eliminar "${ch.name}"?`)) deleteMutation.mutate(ch.id) }}
+                    isLast={i === arr.length - 1 && j === children.length - 1}
+                  />
+                ))}
               </div>
-            </div>
-          )}
-        </div>
+            )
+          })}
+
+          {childCategories
+            .filter((ch) => !rootCategories.find((r) => r.id === ch.parentId))
+            .map((ch, i, arr) => (
+              <Row
+                key={ch.id}
+                category={ch}
+                indent
+                onEdit={() => startEdit(ch)}
+                onDelete={() => { if (window.confirm(`¿Eliminar "${ch.name}"?`)) deleteMutation.mutate(ch.id) }}
+                isLast={i === arr.length - 1}
+              />
+            ))}
+        </section>
       )}
+    </div>
+  )
+}
+
+function Row({
+  category, indent, isLast, onEdit, onDelete,
+}: {
+  category: Category
+  indent?: boolean
+  isLast?: boolean
+  onEdit: () => void
+  onDelete: () => void
+}) {
+  return (
+    <div
+      className={cn(
+        'group grid grid-cols-[40px_1fr_90px_130px_70px] gap-3 items-center px-[22px] py-3',
+        !isLast && 'border-b border-rule-soft',
+      )}
+    >
+      <div className={cn(
+        'flex items-center justify-center rounded-md',
+        indent ? 'w-7 h-7 bg-transparent text-sepia text-[14px] ml-2' : 'w-8 h-8 bg-sepia-soft text-ink text-[16px]',
+      )}>
+        {indent ? '↳' : glyphFor(category)}
+      </div>
+      <div>
+        <div className="font-serif text-base">{category.name}</div>
+        {category.description && (
+          <div className="text-[11px] text-sepia mt-0.5 truncate">{category.description}</div>
+        )}
+      </div>
+      <span className="font-mono text-[12px] text-sepia text-right">{category.transactionCount}</span>
+      <span className="font-serif text-[16px] text-right">{formatCurrency(category.totalAmount)}</span>
+      <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+        <button
+          onClick={onEdit}
+          className="font-serif italic text-[12px] text-sepia hover:text-ink transition-colors"
+        >
+          <Pencil className="w-3.5 h-3.5" />
+        </button>
+        <button
+          onClick={onDelete}
+          className="text-sepia hover:text-wine transition-colors"
+          aria-label="Eliminar"
+        >
+          <Trash2 className="w-3.5 h-3.5" />
+        </button>
+      </div>
     </div>
   )
 }
