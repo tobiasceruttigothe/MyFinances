@@ -2,9 +2,28 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Knowledge base — READ THIS FIRST
+
+There is a curated **knowledge wiki** at `Vault-Myfinance/` (Obsidian vault, Markdown + wikilinks). It is **more current and synthesized than this file** — read it before answering questions about the project or making non-trivial changes.
+
+Entry points:
+- `Vault-Myfinance/WIKI.md` — schema and operating manual (ingest / query / review flows; page conventions; frontmatter).
+- `Vault-Myfinance/index.md` — catalog of every page, grouped by category.
+- `Vault-Myfinance/overview.md` — high-level synthesis of the project.
+- `Vault-Myfinance/log.md` — chronological log of changes to the wiki (`grep "^## \[" log.md | tail -10` for recent activity).
+
+Vault layout:
+- `entities/` — services and infrastructure (one file per service).
+- `concepts/` — patterns and transversal mechanisms (JWT propagation, Feign+Resilience4j, Cuaderno design system, etc.).
+- `decisions/` — ADRs (decision + context + consequences).
+- `sources/` — summaries of source material (commits, docs, conversations, the design handoff bundle).
+- `analyses/` — archived syntheses of past queries (e.g., the active **migration roadmap** at `analyses/next-steps-cuaderno-migration.md`).
+
+When ingesting new sources (commits, docs, conversations), follow `WIKI.md` § 4.1. When you finish meaningful work, log it in `log.md` with the prefix `## [YYYY-MM-DD] <op> | <title>`.
+
 ## Project Overview
 
-MyFinances is a personal finance management app with a Spring Cloud microservices backend and an (in-progress) frontend. The backend is deployed on Minikube (Kubernetes).
+MyFinances is a personal finance management app with a Spring Cloud microservices backend and a React frontend (mid-migration to the "Cuaderno" visual system — see the wiki). The backend is deployed on Minikube (Kubernetes).
 
 ## Common Commands
 
@@ -81,7 +100,7 @@ All 63 assertions should pass. The only expected failure is Keycloak direct logi
 ### Authentication
 
 - **Keycloak realm**: `myfinances-realm`
-- **Test credentials**: `usuario_prueba` / `1234`
+- **Test credentials**: `usuario@test.com` / `Test@1234` (the username is `usuario_prueba` but `POST /api/v1/users/login` validates the `email` field with `@Email`, so the username doesn't work as login input — use the email)
 - Gateway whitelist (no auth required): only `GET /api/v1/users/health`
 - All other endpoints require a valid Bearer token
 
@@ -120,7 +139,16 @@ backend/
 
 ## Frontend
 
-The `frontend/` directory is currently empty. The backend API is stable and ready for frontend development.
+The `frontend/` directory contains a React 19 + TypeScript + Vite 7 application using Tailwind CSS v4 (`@tailwindcss/vite`, no `tailwind.config.js` — tokens via `@theme` in CSS), shadcn/ui pattern with Radix UI primitives, TanStack Query, React Hook Form + Zod, Recharts, Zustand, React Router 7, Lucide React icons.
+
+```bash
+cd frontend
+npm run dev      # Vite dev server (http://localhost:5173)
+npm run build    # tsc -b && vite build
+npm run lint     # eslint .
+```
+
+A design handoff bundle lives in `frontend/design_handoff_my_finances/` (May 2026) introducing the **"Cuaderno"** visual system — see its `README.md` and `design-system.html` for tokens, components, and a 7-step migration plan. Step 1 (replace `src/index.css` with the `@theme` block; add Google Fonts to `index.html`) has been applied.
 
 
 
