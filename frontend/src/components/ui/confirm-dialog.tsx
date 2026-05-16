@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -24,9 +24,20 @@ interface ConfirmDialogProps {
   loading?: boolean
 }
 
-export function ConfirmDialog({
-  open,
-  onOpenChange,
+export function ConfirmDialog(props: ConfirmDialogProps) {
+  const { open, onOpenChange, tone = 'danger' } = props
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent tone={tone} width={460}>
+        {/* Body lives in a child so its `typed` state remounts each time the
+            dialog opens (Radix Portal mounts/unmounts based on `open`). */}
+        <ConfirmBody {...props} />
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+function ConfirmBody({
   eyebrow,
   title,
   italicTitle,
@@ -40,10 +51,6 @@ export function ConfirmDialog({
 }: ConfirmDialogProps) {
   const [typed, setTyped] = useState('')
 
-  useEffect(() => {
-    if (!open) setTyped('')
-  }, [open])
-
   const requiresTyping = Boolean(typeToConfirm)
   const matches = !requiresTyping || typed.trim() === typeToConfirm
   const canConfirm = matches && !loading
@@ -54,51 +61,49 @@ export function ConfirmDialog({
       : 'bg-ink text-paper rounded-pill px-[18px] py-[10px]'
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent tone={tone} width={460}>
-        <DialogHeader
-          eyebrow={eyebrow ?? (tone === 'danger' ? 'Acción permanente' : undefined)}
-          title={title}
-          italic={italicTitle}
-          tone={tone}
-        />
-        <DialogBody className="space-y-4">
-          {description && <DialogDescription>{description}</DialogDescription>}
-          {requiresTyping && (
-            <div className="border border-dashed border-wine rounded-md bg-wine-soft px-4 py-3">
-              <div className="text-[11px] tracking-[0.14em] uppercase text-wine font-semibold mb-1.5">
-                Escribí <span className="font-mono tracking-wider">{typeToConfirm}</span> para confirmar
-              </div>
-              <input
-                autoFocus
-                value={typed}
-                onChange={(e) => setTyped(e.target.value)}
-                className="w-full bg-transparent outline-none font-mono text-[16px] tracking-wider border-b border-wine pb-1 text-ink placeholder:text-wine/50"
-                placeholder={typeToConfirm}
-                aria-label={`Escribí ${typeToConfirm} para confirmar`}
-              />
+    <>
+      <DialogHeader
+        eyebrow={eyebrow ?? (tone === 'danger' ? 'Acción permanente' : undefined)}
+        title={title}
+        italic={italicTitle}
+        tone={tone}
+      />
+      <DialogBody className="space-y-4">
+        {description && <DialogDescription>{description}</DialogDescription>}
+        {requiresTyping && (
+          <div className="border border-dashed border-wine rounded-md bg-wine-soft px-4 py-3">
+            <div className="text-[11px] tracking-[0.14em] uppercase text-wine font-semibold mb-1.5">
+              Escribí <span className="font-mono tracking-wider">{typeToConfirm}</span> para confirmar
             </div>
-          )}
-        </DialogBody>
-        <DialogFooter>
-          <DialogClose asChild>
-            <button
-              type="button"
-              className="font-serif italic text-[14px] text-sepia hover:text-ink transition-colors px-3 py-2"
-            >
-              {cancelLabel}
-            </button>
-          </DialogClose>
+            <input
+              autoFocus
+              value={typed}
+              onChange={(e) => setTyped(e.target.value)}
+              className="w-full bg-transparent outline-none font-mono text-[16px] tracking-wider border-b border-wine pb-1 text-ink placeholder:text-wine/50"
+              placeholder={typeToConfirm}
+              aria-label={`Escribí ${typeToConfirm} para confirmar`}
+            />
+          </div>
+        )}
+      </DialogBody>
+      <DialogFooter>
+        <DialogClose asChild>
           <button
             type="button"
-            onClick={() => { if (canConfirm) onConfirm() }}
-            disabled={!canConfirm}
-            className={`${confirmClass} text-[13.5px] font-semibold leading-none disabled:opacity-40 disabled:cursor-not-allowed`}
+            className="font-serif italic text-[14px] text-sepia hover:text-ink transition-colors px-3 py-2"
           >
-            {loading ? 'Eliminando…' : confirmLabel}
+            {cancelLabel}
           </button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </DialogClose>
+        <button
+          type="button"
+          onClick={() => { if (canConfirm) onConfirm() }}
+          disabled={!canConfirm}
+          className={`${confirmClass} text-[13.5px] font-semibold leading-none disabled:opacity-40 disabled:cursor-not-allowed`}
+        >
+          {loading ? 'Eliminando…' : confirmLabel}
+        </button>
+      </DialogFooter>
+    </>
   )
 }

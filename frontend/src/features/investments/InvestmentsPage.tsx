@@ -9,6 +9,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { useToast } from '@/components/ui/toast'
 import type { CreateInvestmentRequest, Investment } from '@/types/investment'
 import { Input } from '@/components/ui/input'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { CardSkeleton } from '@/components/ui/skeleton'
 import { formatCurrency, formatPercent, cn } from '@/lib/utils'
 
@@ -72,6 +73,7 @@ export default function InvestmentsPage() {
   const toast = useToast()
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<Investment | null>(null)
+  const [toDelete, setToDelete] = useState<Investment | null>(null)
 
   const { data: investments = [], isLoading } = useQuery({
     queryKey: ['investments'],
@@ -115,6 +117,7 @@ export default function InvestmentsPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['investments'] })
       qc.invalidateQueries({ queryKey: ['account', 'summary'] })
+      setToDelete(null)
       toast.success('Inversión eliminada')
     },
     onError: () => toast.error('Error al eliminar la inversión'),
@@ -340,7 +343,7 @@ export default function InvestmentsPage() {
                         <Pencil className="w-3.5 h-3.5" />
                       </button>
                       <button
-                        onClick={() => { if (window.confirm('¿Eliminar esta posición?')) deleteMutation.mutate(inv.id) }}
+                        onClick={() => setToDelete(inv)}
                         className="text-sepia hover:text-wine transition-colors"
                         aria-label="Eliminar"
                       >
@@ -392,6 +395,27 @@ export default function InvestmentsPage() {
           </section>
         )}
       </div>
+
+      <ConfirmDialog
+        open={!!toDelete}
+        onOpenChange={(o) => !o && setToDelete(null)}
+        title={
+          <>
+            ¿Eliminar la posición <em className="text-sepia">«{toDelete?.description}»</em>?
+          </>
+        }
+        description={
+          toDelete ? (
+            <>
+              Capital actual <strong>{formatCurrency(toDelete.currentCapital, user?.currency)}</strong>{' '}
+              ({formatPercent(toDelete.roi)} de ROI). No se puede deshacer.
+            </>
+          ) : null
+        }
+        confirmLabel="Eliminar posición"
+        loading={deleteMutation.isPending}
+        onConfirm={() => toDelete && deleteMutation.mutate(toDelete.id)}
+      />
     </div>
   )
 }

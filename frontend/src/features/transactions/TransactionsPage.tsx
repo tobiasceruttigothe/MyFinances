@@ -10,6 +10,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { useToast } from '@/components/ui/toast'
 import type { CreateTransactionRequest, Transaction } from '@/types/transaction'
 import { Input } from '@/components/ui/input'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { TableRowSkeleton } from '@/components/ui/skeleton'
 import { formatCurrency, cn } from '@/lib/utils'
 
@@ -52,6 +53,7 @@ export default function TransactionsPage() {
   const [editing, setEditing] = useState<Transaction | null>(null)
   const [filterType, setFilterType] = useState<Filter>('ALL')
   const [search, setSearch] = useState('')
+  const [toDelete, setToDelete] = useState<Transaction | null>(null)
 
   const { data: transactions = [], isLoading } = useQuery({
     queryKey: ['transactions'],
@@ -107,6 +109,7 @@ export default function TransactionsPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['transactions'] })
       qc.invalidateQueries({ queryKey: ['account', 'summary'] })
+      setToDelete(null)
       toast.success('Transacción eliminada')
     },
     onError: () => toast.error('Error al eliminar la transacción'),
@@ -319,9 +322,7 @@ export default function TransactionsPage() {
                           <Pencil className="w-3.5 h-3.5" />
                         </button>
                         <button
-                          onClick={() => {
-                            if (window.confirm(`¿Eliminar "${t.description}"?`)) deleteMutation.mutate(t.id)
-                          }}
+                          onClick={() => setToDelete(t)}
                           className="p-1 text-sepia hover:text-wine transition-colors"
                           aria-label="Eliminar"
                         >
@@ -336,6 +337,28 @@ export default function TransactionsPage() {
           </div>
         )}
       </section>
+
+      <ConfirmDialog
+        open={!!toDelete}
+        onOpenChange={(o) => !o && setToDelete(null)}
+        title={
+          <>
+            ¿Eliminar la transacción <em className="text-sepia">«{toDelete?.description}»</em>?
+          </>
+        }
+        description={
+          toDelete ? (
+            <>
+              {toDelete.type === 'INCOME' ? 'Ingreso' : 'Gasto'} por{' '}
+              <strong>{formatCurrency(toDelete.amount, user?.currency)}</strong> en {toDelete.categoryName}.
+              No se puede deshacer.
+            </>
+          ) : null
+        }
+        confirmLabel="Eliminar"
+        loading={deleteMutation.isPending}
+        onConfirm={() => toDelete && deleteMutation.mutate(toDelete.id)}
+      />
     </div>
   )
 }

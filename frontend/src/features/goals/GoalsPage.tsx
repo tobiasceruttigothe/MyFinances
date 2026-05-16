@@ -8,8 +8,9 @@ import { X, Trash2 } from 'lucide-react'
 import { goalsApi } from '@/api/goals'
 import { useAuthStore } from '@/stores/authStore'
 import { useToast } from '@/components/ui/toast'
-import type { CreateGoalRequest, GoalStatus } from '@/types/goal'
+import type { CreateGoalRequest, Goal, GoalStatus } from '@/types/goal'
 import { Input } from '@/components/ui/input'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { formatCurrency, cn } from '@/lib/utils'
 
 const schema = z.object({
@@ -37,6 +38,7 @@ export default function GoalsPage() {
   const toast = useToast()
   const [showForm, setShowForm] = useState(false)
   const [statusFilter, setStatusFilter] = useState<GoalStatus | 'ALL'>('ALL')
+  const [toDelete, setToDelete] = useState<Goal | null>(null)
 
   const { data: goals = [], isLoading } = useQuery({
     queryKey: ['goals'],
@@ -62,6 +64,7 @@ export default function GoalsPage() {
     mutationFn: (id: number) => goalsApi.delete(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['goals'] })
+      setToDelete(null)
       toast.success('Meta eliminada')
     },
     onError: () => toast.error('Error al eliminar la meta'),
@@ -251,7 +254,7 @@ export default function GoalsPage() {
                       {g.monthlyTargetAmount ? formatCurrency(g.monthlyTargetAmount, user?.currency) : '—'}
                     </span>
                     <button
-                      onClick={() => { if (window.confirm(`¿Eliminar "${g.name}"?`)) deleteMutation.mutate(g.id) }}
+                      onClick={() => setToDelete(g)}
                       className="text-sepia hover:text-wine transition-colors"
                       aria-label="Eliminar"
                     >
@@ -264,6 +267,26 @@ export default function GoalsPage() {
           })}
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!toDelete}
+        onOpenChange={(o) => !o && setToDelete(null)}
+        title={
+          <>
+            ¿Eliminar la meta <em className="text-sepia">«{toDelete?.name}»</em>?
+          </>
+        }
+        description={
+          <>
+            Vas a perder el historial de aportes ({formatCurrency(toDelete?.currentAmount ?? 0, user?.currency)} acumulados)
+            y la meta entera. Esta acción no se puede deshacer.
+          </>
+        }
+        typeToConfirm="ELIMINAR"
+        confirmLabel="Eliminar meta"
+        loading={deleteMutation.isPending}
+        onConfirm={() => toDelete && deleteMutation.mutate(toDelete.id)}
+      />
     </div>
   )
 }

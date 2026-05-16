@@ -8,6 +8,7 @@ import { categoriesApi } from '@/api/categories'
 import { useToast } from '@/components/ui/toast'
 import type { Category, CreateCategoryRequest } from '@/types/category'
 import { Input } from '@/components/ui/input'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { formatCurrency, cn } from '@/lib/utils'
 
 const schema = z.object({
@@ -28,6 +29,7 @@ export default function CategoriesPage() {
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<Category | null>(null)
   const [tab, setTab] = useState<'EXPENSE' | 'INCOME'>('EXPENSE')
+  const [toDelete, setToDelete] = useState<Category | null>(null)
 
   const { data: categories = [], isLoading } = useQuery({
     queryKey: ['categories'],
@@ -65,6 +67,7 @@ export default function CategoriesPage() {
     mutationFn: (id: number) => categoriesApi.delete(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['categories'] })
+      setToDelete(null)
       toast.success('Categoría eliminada')
     },
     onError: () => toast.error('No se puede eliminar: la categoría tiene transacciones o subcategorías asociadas'),
@@ -211,7 +214,7 @@ export default function CategoriesPage() {
                 <Row
                   category={c}
                   onEdit={() => startEdit(c)}
-                  onDelete={() => { if (window.confirm(`¿Eliminar "${c.name}"?`)) deleteMutation.mutate(c.id) }}
+                  onDelete={() => setToDelete(c)}
                   isLast={i === arr.length - 1 && children.length === 0}
                 />
                 {children.map((ch, j) => (
@@ -220,7 +223,7 @@ export default function CategoriesPage() {
                     category={ch}
                     indent
                     onEdit={() => startEdit(ch)}
-                    onDelete={() => { if (window.confirm(`¿Eliminar "${ch.name}"?`)) deleteMutation.mutate(ch.id) }}
+                    onDelete={() => setToDelete(ch)}
                     isLast={i === arr.length - 1 && j === children.length - 1}
                   />
                 ))}
@@ -236,12 +239,31 @@ export default function CategoriesPage() {
                 category={ch}
                 indent
                 onEdit={() => startEdit(ch)}
-                onDelete={() => { if (window.confirm(`¿Eliminar "${ch.name}"?`)) deleteMutation.mutate(ch.id) }}
+                onDelete={() => setToDelete(ch)}
                 isLast={i === arr.length - 1}
               />
             ))}
         </section>
       )}
+
+      <ConfirmDialog
+        open={!!toDelete}
+        onOpenChange={(o) => !o && setToDelete(null)}
+        title={
+          <>
+            ¿Eliminar la categoría <em className="text-sepia">«{toDelete?.name}»</em>?
+          </>
+        }
+        description={
+          toDelete?.transactionCount
+            ? <>Esta categoría tiene <strong>{toDelete.transactionCount}</strong> {toDelete.transactionCount === 1 ? 'transacción' : 'transacciones'}. El backend va a rechazar el borrado si quedan transacciones o subcategorías asociadas — primero re-asignalas.</>
+            : <>Si la categoría no tiene transacciones ni subcategorías, se elimina definitivamente. No se puede deshacer.</>
+        }
+        typeToConfirm="ELIMINAR"
+        confirmLabel="Eliminar categoría"
+        loading={deleteMutation.isPending}
+        onConfirm={() => toDelete && deleteMutation.mutate(toDelete.id)}
+      />
     </div>
   )
 }
