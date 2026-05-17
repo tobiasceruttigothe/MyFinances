@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { TrendingUp } from 'lucide-react'
 import { authApi } from '@/api/auth'
 import { useAuthStore } from '@/stores/authStore'
 
@@ -8,101 +7,116 @@ const KEYCLOAK_URL = import.meta.env.VITE_KEYCLOAK_URL ?? 'http://localhost:8082
 const REALM = import.meta.env.VITE_KEYCLOAK_REALM ?? 'myfinances-realm'
 const CLIENT_ID = import.meta.env.VITE_KEYCLOAK_CLIENT_ID ?? 'myfinances-app'
 
+type InitialState =
+  | { kind: 'error'; message: string }
+  | { kind: 'ready'; code: string; codeVerifier: string }
+
+function readInitialState(): InitialState {
+  const params = new URLSearchParams(window.location.search)
+  const code = params.get('code')
+  const returnedState = params.get('state')
+  const errorParam = params.get('error')
+
+  if (errorParam) {
+    return { kind: 'error', message: 'Autenticación cancelada o rechazada por Google.' }
+  }
+
+  const storedState = sessionStorage.getItem('oauth_state')
+  const codeVerifier = sessionStorage.getItem('oauth_code_verifier')
+
+  if (!code || !storedState || returnedState !== storedState || !codeVerifier) {
+    return { kind: 'error', message: 'Estado de autenticación inválido o expirado. Por favor intentá de nuevo.' }
+  }
+
+  return { kind: 'ready', code, codeVerifier }
+}
+
 export default function OAuthCallbackPage() {
   const navigate = useNavigate()
-  const { setTokens, setUser } = useAuthStore()
-  const [error, setError] = useState<string | null>(null)
+  const setTokens = useAuthStore((s) => s.setTokens)
+  const setUser = useAuthStore((s) => s.setUser)
+  const [initial] = useState(readInitialState)
+  const [asyncError, setAsyncError] = useState<string | null>(null)
+
+  const error = initial.kind === 'error' ? initial.message : asyncError
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search)
-    const code = params.get('code')
-    const returnedState = params.get('state')
-    const errorParam = params.get('error')
-
-    if (errorParam) {
-      setError('Autenticación cancelada o rechazada por Google.')
-      return
-    }
-
-    const storedState = sessionStorage.getItem('oauth_state')
-    const codeVerifier = sessionStorage.getItem('oauth_code_verifier')
-
-    if (!code || !storedState || returnedState !== storedState || !codeVerifier) {
-      setError('Estado de autenticación inválido o expirado. Por favor intentá de nuevo.')
-      return
-    }
+    if (initial.kind === 'error') return
 
     sessionStorage.removeItem('oauth_state')
     sessionStorage.removeItem('oauth_code_verifier')
 
-    handleCallback(code, codeVerifier)
+    const { code, codeVerifier } = initial
+
+    const run = async () => {
+      try {
+        const redirectUri = `${window.location.origin}/auth/callback`
+
+        // Token exchange goes directly to Keycloak, so the response is OAuth2
+        // snake_case (access_token / refresh_token). Our /api/v1/users/refresh-token
+        // wraps the same Keycloak response in a camelCase DTO; this path bypasses it.
+        const tokenRes = await fetch(
+          `${KEYCLOAK_URL}/realms/${REALM}/protocol/openid-connect/token`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+              grant_type: 'authorization_code',
+              client_id: CLIENT_ID,
+              code,
+              redirect_uri: redirectUri,
+              code_verifier: codeVerifier,
+            }),
+          }
+        )
+
+        if (!tokenRes.ok) {
+          throw new Error(`Token exchange failed: ${tokenRes.status}`)
+        }
+
+        const tokens = await tokenRes.json()
+        setTokens(tokens.access_token, tokens.refresh_token)
+
+        const [, payloadB64] = tokens.access_token.split('.')
+        const payload = JSON.parse(atob(payloadB64.replace(/-/g, '+').replace(/_/g, '/')))
+
+        await authApi.socialRegister({
+          email: payload.email ?? '',
+          firstName: payload.given_name ?? '',
+          lastName: payload.family_name ?? '',
+        })
+
+        const profile = await authApi.getProfile()
+        setUser(profile)
+
+        navigate('/dashboard', { replace: true })
+      } catch {
+        setAsyncError('Ocurrió un error al completar la autenticación. Por favor intentá de nuevo.')
+      }
+    }
+
+    void run()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  async function handleCallback(code: string, codeVerifier: string) {
-    try {
-      const redirectUri = `${window.location.origin}/auth/callback`
-
-      // 1. Exchange authorization code for tokens
-      const tokenRes = await fetch(
-        `${KEYCLOAK_URL}/realms/${REALM}/protocol/openid-connect/token`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: new URLSearchParams({
-            grant_type: 'authorization_code',
-            client_id: CLIENT_ID,
-            code,
-            redirect_uri: redirectUri,
-            code_verifier: codeVerifier,
-          }),
-        }
-      )
-
-      if (!tokenRes.ok) {
-        throw new Error(`Token exchange failed: ${tokenRes.status}`)
-      }
-
-      const tokens = await tokenRes.json()
-
-      // 2. Store access token so apiClient can use it immediately
-      setTokens(tokens.access_token, tokens.refresh_token)
-
-      // 3. Decode JWT to extract user claims (no verification needed — gateway already does it)
-      const [, payloadB64] = tokens.access_token.split('.')
-      const payload = JSON.parse(atob(payloadB64.replace(/-/g, '+').replace(/_/g, '/')))
-
-      // 4. Ensure user exists in our DB (idempotent — safe to call on every login)
-      await authApi.socialRegister({
-        email: payload.email ?? '',
-        firstName: payload.given_name ?? '',
-        lastName: payload.family_name ?? '',
-      })
-
-      // 5. Fetch full profile and store in auth state
-      const profile = await authApi.getProfile()
-      setUser(profile)
-
-      navigate('/dashboard', { replace: true })
-    } catch {
-      setError('Ocurrió un error al completar la autenticación. Por favor intentá de nuevo.')
-    }
-  }
-
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 px-6">
-        <div className="text-center max-w-sm">
-          <div className="flex items-center justify-center w-12 h-12 bg-red-100 rounded-full mx-auto mb-4">
-            <span className="text-red-600 text-xl">✕</span>
+      <div className="min-h-screen flex items-center justify-center bg-paper px-6">
+        <div className="text-center max-w-md">
+          <div className="text-[11px] tracking-[0.2em] uppercase text-wine font-semibold">
+            Autenticación · Error
           </div>
-          <h2 className="text-lg font-semibold text-gray-900 mb-2">Error de autenticación</h2>
-          <p className="text-sm text-gray-500 mb-6">{error}</p>
+          <h1 className="font-serif font-normal text-[36px] leading-tight tracking-tight mt-3">
+            Algo salió mal<span className="text-wine">.</span>
+          </h1>
+          <p className="font-serif italic text-[15px] text-sepia mt-4 leading-relaxed">
+            {error}
+          </p>
           <button
             onClick={() => navigate('/login')}
-            className="text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline"
+            className="mt-8 bg-ink text-paper rounded-pill px-[18px] py-[11px] text-[13px] font-medium tracking-wide hover:bg-ink/90 transition-colors"
           >
-            Volver al inicio de sesión
+            Volver al inicio
           </button>
         </div>
       </div>
@@ -110,13 +124,18 @@ export default function OAuthCallbackPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="text-center">
-        <div className="flex items-center justify-center w-12 h-12 bg-blue-600 rounded-xl mx-auto mb-5">
-          <TrendingUp className="w-6 h-6 text-white" />
+    <div className="min-h-screen flex items-center justify-center bg-paper px-6">
+      <div className="text-center max-w-md">
+        <div className="text-[11px] tracking-[0.2em] uppercase text-sepia font-semibold">
+          Autenticación · Google
         </div>
-        <div className="animate-spin rounded-full h-7 w-7 border-b-2 border-blue-600 mx-auto mb-4" />
-        <p className="text-sm text-gray-500 font-medium">Completando autenticación con Google…</p>
+        <h1 className="font-serif font-normal text-[36px] leading-tight tracking-tight mt-3">
+          Completando tu sesión<span className="text-wine">.</span>
+        </h1>
+        <p className="font-serif italic text-[15px] text-sepia mt-4 leading-relaxed">
+          Un momento mientras armamos tu cuaderno.
+        </p>
+        <div className="mt-8 inline-block animate-spin rounded-full h-7 w-7 border-b-2 border-ink" />
       </div>
     </div>
   )
