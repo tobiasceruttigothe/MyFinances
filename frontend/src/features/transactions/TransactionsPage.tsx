@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { X, Pencil, Trash2 } from 'lucide-react'
@@ -69,14 +69,16 @@ export default function TransactionsPage() {
     register,
     handleSubmit,
     reset,
-    watch,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<FormData>({
     resolver: zodResolver(schema) as never,
     defaultValues: { type: 'EXPENSE' },
   })
 
-  const selectedType = watch('type')
+  // useWatch instead of watch() — the latter returns a non-memoizable function
+  // that trips React Compiler (see react-hooks/incompatible-library).
+  const selectedType = useWatch({ control, name: 'type' })
   const filteredCategories = categories.filter((c) => c.type === selectedType)
 
   const createMutation = useMutation({
