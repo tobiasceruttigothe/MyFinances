@@ -41,6 +41,17 @@
   /* Sombras */
   --shadow-card: 0 8px 16px -10px rgba(26, 22, 18, 0.18);
   --shadow-pop:  0 18px 30px -16px rgba(26, 22, 18, 0.32);
+
+  /* Animaciones · overlays Cuaderno
+     Tailwind v4 expone cada --animate-* como utility animate-{name}.
+     Las salidas usan `forwards` para que el elemento muestre el frame
+     final mientras Radix lo desmonta (sin parpadeo de snap-back). */
+  --animate-cuaderno-overlay-in:    cuaderno-overlay-in 150ms ease-out;
+  --animate-cuaderno-overlay-out:   cuaderno-overlay-out 100ms ease-out forwards;
+  --animate-cuaderno-content-in:    cuaderno-content-in 200ms cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-cuaderno-content-out:   cuaderno-content-out 150ms cubic-bezier(0.4, 0, 0.6, 1) forwards;
+  --animate-cuaderno-toast-in:      cuaderno-toast-in 220ms cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-cuaderno-toast-out:     cuaderno-toast-out 150ms ease-in forwards;
 }
 
 @layer base {
@@ -72,4 +83,45 @@
     --color-wine-soft:  rgba(210, 126, 126, 0.12);
     --color-gold:       var(--color-tinta-gold);
   }
+}
+
+/* Keyframes referenciadas por los --animate-* del @theme. Mantienen la
+   centerización del Dialog (translate -50%) dentro del transform para no
+   pelearse con las utilidades -translate-x-1/2 -translate-y-1/2. */
+
+@keyframes cuaderno-overlay-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes cuaderno-overlay-out {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+@keyframes cuaderno-content-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -48%) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+@keyframes cuaderno-content-out {
+  from {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translate(-50%, -48%) scale(0.97);
+  }
+}
+@keyframes cuaderno-toast-in {
+  from { transform: translateX(calc(100% + 1.5rem)); }
+  to   { transform: translateX(0); }
+}
+@keyframes cuaderno-toast-out {
+  from { opacity: 1; transform: translateX(0); }
+  to   { opacity: 0; transform: translateX(2rem); }
 }

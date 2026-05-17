@@ -16,6 +16,8 @@ const DialogOverlay = React.forwardRef<
     ref={ref}
     className={cn(
       'fixed inset-0 z-50 bg-ink/35 backdrop-blur-[2px]',
+      'data-[state=open]:animate-cuaderno-overlay-in',
+      'data-[state=closed]:animate-cuaderno-overlay-out',
       className,
     )}
     {...props}
@@ -46,6 +48,11 @@ const DialogContent = React.forwardRef<
         'bg-paper text-ink border rounded-lg shadow-pop',
         tone === 'danger' ? 'border-wine' : 'border-rule',
         'flex flex-col',
+        // El keyframe centra con translate(-50%, -50%) — mismo punto que las
+        // utilidades -translate-* de arriba, así que el snap-back tras la
+        // animación es invisible.
+        'data-[state=open]:animate-cuaderno-content-in',
+        'data-[state=closed]:animate-cuaderno-content-out',
         className,
       )}
       {...props}

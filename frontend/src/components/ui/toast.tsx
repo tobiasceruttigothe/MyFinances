@@ -46,6 +46,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             className={cn(
               'pointer-events-auto flex items-start gap-3 bg-paper border border-rule border-l-4',
               'rounded-sm px-4 py-3 shadow-pop',
+              'data-[state=open]:animate-cuaderno-toast-in',
+              'data-[state=closed]:animate-cuaderno-toast-out',
               'data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)]',
               'data-[swipe=cancel]:translate-x-0 data-[swipe=cancel]:transition-transform',
               'data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)]',
