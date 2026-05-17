@@ -101,7 +101,13 @@ All 63 assertions should pass. The only expected failure is Keycloak direct logi
 
 - **Keycloak realm**: `myfinances-realm`
 - **Test credentials**: `usuario@test.com` / `Test@1234` (the username is `usuario_prueba` but `POST /api/v1/users/login` validates the `email` field with `@Email`, so the username doesn't work as login input — use the email)
-- Gateway whitelist (no auth required): only `GET /api/v1/users/health`
+- Gateway whitelist (no auth required, see `gateway-service/.../config/SecurityConfig.java`):
+  - `OPTIONS /**` (CORS preflight)
+  - `POST /api/v1/users/register`
+  - `POST /api/v1/users/login`
+  - `POST /api/v1/users/refresh-token`
+  - `GET /api/v1/users/health`
+  - `/actuator/**`
 - All other endpoints require a valid Bearer token
 
 ## Key File Locations
