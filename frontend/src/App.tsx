@@ -21,7 +21,14 @@ function SessionRestorer() {
 
   useEffect(() => {
     const refreshToken = localStorage.getItem('refreshToken')
-    if (!refreshToken) return
+    // Defensive: treat the literal strings "undefined"/"null" as absent. They
+    // can be left over from the pre-c0b2e94 bug where setItem coerced an
+    // undefined value into a string. Self-heal by removing the poisoned entry
+    // so the next login starts from a clean slate.
+    if (!refreshToken || refreshToken === 'undefined' || refreshToken === 'null') {
+      if (refreshToken) localStorage.removeItem('refreshToken')
+      return
+    }
 
     authApi
       .refreshToken(refreshToken)

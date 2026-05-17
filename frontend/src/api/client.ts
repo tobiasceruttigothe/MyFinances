@@ -48,7 +48,10 @@ apiClient.interceptors.response.use(
     isRefreshing = true
 
     const refreshToken = localStorage.getItem('refreshToken')
-    if (!refreshToken) {
+    // Defensive: same poison check as SessionRestorer. The literal "undefined"
+    // would otherwise be sent to Keycloak and fail; cheaper to short-circuit.
+    if (!refreshToken || refreshToken === 'undefined' || refreshToken === 'null') {
+      if (refreshToken) localStorage.removeItem('refreshToken')
       useAuthStore.getState().logout()
       processQueue(error, null)
       isRefreshing = false
