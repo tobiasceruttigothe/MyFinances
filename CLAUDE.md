@@ -23,7 +23,7 @@ When ingesting new sources (commits, docs, conversations), follow `WIKI.md` § 4
 
 ## Project Overview
 
-MyFinances is a personal finance management app with a Spring Cloud microservices backend and a React frontend (mid-migration to the "Cuaderno" visual system — see the wiki). The backend is deployed on Minikube (Kubernetes).
+MyFinances is a personal finance management app with a Spring Cloud microservices backend and a React frontend on the **Cuaderno** visual system (migration complete — see the wiki). The backend is deployed on Minikube (Kubernetes).
 
 ## Common Commands
 
@@ -154,7 +154,7 @@ npm run build    # tsc -b && vite build
 npm run lint     # eslint .
 ```
 
-A design handoff bundle lives in `frontend/design_handoff_my_finances/` (May 2026) introducing the **"Cuaderno"** visual system — see its `README.md` and `design-system.html` for tokens, components, and a 7-step migration plan. Step 1 (replace `src/index.css` with the `@theme` block; add Google Fonts to `index.html`) has been applied.
+A design handoff bundle lives in `frontend/design_handoff_my_finances/` (May 2026) introducing the **"Cuaderno"** visual system — see its `README.md` and `design-system.html` for tokens, components, and a 7-step migration plan. The 7-step migration is **complete** as of 2026-05-17 (commits prefixed `feat(ui)`). The current `@theme` in `src/index.css` defines the Cuaderno (paper) + Tinta (ink, for Inversiones) palettes, fonts, radii, shadows, and the `--animate-cuaderno-*` tokens used by Dialog and Toast overlays. Lint is at **0 errors + 0 warnings**; any new lint issue is a regression. Open items live in `Vault-Myfinance/analyses/next-steps-cuaderno-migration.md` § Próximo (bottom-sheets mobile, sparkline real, visual review).
 
 
 
