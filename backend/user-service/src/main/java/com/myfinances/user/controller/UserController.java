@@ -46,10 +46,10 @@ public class UserController {
      * 🔄 Renovar token
      */
     @PostMapping("/refresh-token")
-    public ResponseEntity<Map<String, Object>> refreshToken(@RequestBody Map<String, String> request) {
+    public ResponseEntity<RefreshTokenResponse> refreshToken(@RequestBody Map<String, String> request) {
         log.debug("POST /users/refresh-token");
         String refreshToken = request.get("refreshToken");
-        Map<String, Object> response = userService.refreshToken(refreshToken);
+        RefreshTokenResponse response = userService.refreshToken(refreshToken);
         log.debug("Token renovado exitosamente");
         return ResponseEntity.ok(response);
     }

@@ -100,17 +100,27 @@ public class UserService {
 
     /**
      * 🔄 Renovar token
+     *
+     * Keycloak responde con snake_case (access_token, refresh_token, expires_in) per OAuth2 standard.
+     * Wrappeamos en RefreshTokenResponse (camelCase) para mantener el contrato consistente con login().
+     * Si devolvemos el Map crudo, el frontend lee `data.accessToken` → undefined y rompe la sesión.
      */
-    public Map<String, Object> refreshToken(String refreshToken) {
+    public RefreshTokenResponse refreshToken(String refreshToken) {
         log.debug("Renovando token de acceso");
 
         if (refreshToken == null || refreshToken.trim().isEmpty()) {
             throw new IllegalArgumentException("El refresh token no puede estar vacío");
         }
 
-        Map<String, Object> response = keycloakService.refreshToken(refreshToken);
+        Map<String, Object> kc = keycloakService.refreshToken(refreshToken);
         log.debug("Token renovado exitosamente");
-        return response;
+
+        return RefreshTokenResponse.builder()
+                .accessToken((String) kc.get("access_token"))
+                .refreshToken((String) kc.get("refresh_token"))
+                .expiresIn((Integer) kc.get("expires_in"))
+                .tokenType("Bearer")
+                .build();
     }
 
     /**

@@ -341,10 +341,12 @@ class UserControllerTest {
             Map<String, String> request = new HashMap<>();
             request.put("refreshToken", "eyJhbGciOiJSUzI1NiIsInR5cCI...");
 
-            Map<String, Object> response = new HashMap<>();
-            response.put("access_token", "nuevo_access_token");
-            response.put("refresh_token", "nuevo_refresh_token");
-            response.put("expires_in", 3600);
+            RefreshTokenResponse response = RefreshTokenResponse.builder()
+                    .accessToken("nuevo_access_token")
+                    .refreshToken("nuevo_refresh_token")
+                    .expiresIn(3600)
+                    .tokenType("Bearer")
+                    .build();
 
             when(userService.refreshToken(anyString())).thenReturn(response);
 
@@ -352,7 +354,10 @@ class UserControllerTest {
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.access_token").exists());
+                    .andExpect(jsonPath("$.accessToken").exists())
+                    .andExpect(jsonPath("$.refreshToken").exists())
+                    .andExpect(jsonPath("$.expiresIn").value(3600))
+                    .andExpect(jsonPath("$.tokenType").value("Bearer"));
         }
 
         @Test

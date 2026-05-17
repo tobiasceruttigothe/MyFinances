@@ -237,9 +237,9 @@
 									"pm.test('Token renovado', function() {",
 									"    pm.expect(pm.response.code).to.eql(200);",
 									"    var json = pm.response.json();",
-									"    pm.expect(json.access_token).to.not.be.empty;",
-									"    pm.environment.set('accessToken', json.access_token);",
-									"    pm.environment.set('refreshToken', json.refresh_token);",
+									"    pm.expect(json.accessToken).to.not.be.empty;",
+									"    pm.environment.set('accessToken', json.accessToken);",
+									"    pm.environment.set('refreshToken', json.refreshToken);",
 									"});"
 								],
 								"type": "text/javascript"
