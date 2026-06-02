@@ -38,6 +38,27 @@ public class User {
     @Column(name = "last_name", length = 50)
     private String lastName;
 
+    // ⭐ Teléfono para vincular la cuenta con WhatsApp (intake-service).
+    // unique permite múltiples NULL en Postgres; solo un usuario puede reclamar un número.
+    @Column(unique = true, length = 25)
+    private String phone;
+
+    // Solo los teléfonos verificados se aceptan para crear transacciones por WhatsApp.
+    // columnDefinition con default a nivel DB para que el ALTER funcione sobre filas existentes
+    // (ddl-auto=update no puede agregar una columna NOT NULL sin default a una tabla con datos).
+    // @Builder.Default: sin esto, User.builder() ignora el inicializador y guarda null → viola NOT NULL.
+    @Builder.Default
+    @Column(name = "phone_verified", nullable = false, columnDefinition = "boolean default false")
+    private Boolean phoneVerified = false;
+
+    // Código de verificación de un solo uso + expiración.
+    // Fase 3: el código se enviará por WhatsApp. Por ahora se loguea (ver UserService).
+    @Column(name = "phone_verification_code", length = 10)
+    private String phoneVerificationCode;
+
+    @Column(name = "phone_verification_expires_at")
+    private LocalDateTime phoneVerificationExpiresAt;
+
     @Column(nullable = false)
     private Boolean enabled = true;
 

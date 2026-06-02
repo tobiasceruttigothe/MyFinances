@@ -17,6 +17,12 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     boolean existsByEmail(String email);
 
     boolean existsByUsername(String username);
+
+    // Resolución teléfono → usuario para el intake-service (solo teléfonos verificados).
+    Optional<User> findByPhoneAndPhoneVerifiedTrue(String phone);
+
+    // Para detectar si otro usuario ya reclamó/verificó este número.
+    Optional<User> findByPhone(String phone);
 }
 
 // ==========================================

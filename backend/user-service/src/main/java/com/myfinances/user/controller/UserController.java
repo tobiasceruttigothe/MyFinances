@@ -106,6 +106,44 @@ public class UserController {
     }
 
     /**
+     * 📱 Iniciar verificación de teléfono (vínculo con WhatsApp).
+     * Genera y "envía" un código (Fase 3: por WhatsApp; por ahora se loguea).
+     */
+    @PostMapping("/phone/verify")
+    public ResponseEntity<Map<String, String>> requestPhoneVerification(
+            @RequestHeader("X-User-Id") UUID userId,
+            @Valid @RequestBody PhoneVerificationRequestDTO request) {
+
+        log.debug("POST /users/phone/verify - userId={}", userId);
+        userService.requestPhoneVerification(userId, request.getPhone());
+        return ResponseEntity.ok(Map.of(
+                "status", "CODE_SENT",
+                "message", "Código de verificación enviado al teléfono indicado"));
+    }
+
+    /**
+     * 📱 Confirmar verificación de teléfono con el código recibido.
+     */
+    @PostMapping("/phone/confirm")
+    public ResponseEntity<UserProfileResponseDTO> confirmPhoneVerification(
+            @RequestHeader("X-User-Id") UUID userId,
+            @Valid @RequestBody PhoneVerificationConfirmDTO request) {
+
+        log.debug("POST /users/phone/confirm - userId={}", userId);
+        return ResponseEntity.ok(userService.confirmPhoneVerification(userId, request.getCode()));
+    }
+
+    /**
+     * 🔎 Lookup interno teléfono → userId (lo consume el intake-service).
+     * No pasa por el gateway; se llama service-to-service dentro del cluster.
+     */
+    @GetMapping("/by-phone/{phone}")
+    public ResponseEntity<PhoneLookupResponseDTO> getUserByPhone(@PathVariable String phone) {
+        log.debug("GET /users/by-phone/{}", phone);
+        return ResponseEntity.ok(userService.findUserIdByPhone(phone));
+    }
+
+    /**
      * Health check (public)
      */
     @GetMapping("/health")

@@ -21,6 +21,10 @@ public class UserProfileResponseDTO {
     private String lastName;
     private Boolean enabled;
 
+    // Vínculo con WhatsApp (intake-service)
+    private String phone;
+    private Boolean phoneVerified;
+
     // Settings
     private Boolean linkInvestmentsToTransactions;
     private String currency;

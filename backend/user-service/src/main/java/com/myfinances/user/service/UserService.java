@@ -15,6 +15,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.security.SecureRandom;
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Base64;
 import java.util.Map;
@@ -31,6 +34,8 @@ public class UserService {
     private static final String DEFAULT_TIMEZONE = "America/Argentina/Buenos_Aires";
     private static final String DEFAULT_LANGUAGE = "es";
     private static final Set<String> VALID_ZONE_IDS = Set.copyOf(ZoneId.getAvailableZoneIds());
+    private static final SecureRandom RANDOM = new SecureRandom();
+    private static final Duration PHONE_CODE_TTL = Duration.ofMinutes(10);
 
     private final UserRepository userRepository;
     private final UserSettingsRepository userSettingsRepository;
@@ -228,6 +233,82 @@ public class UserService {
     }
 
     /**
+     * 📱 Inicia la verificación de un teléfono para vincularlo con WhatsApp.
+     * Genera un código de 6 dígitos con TTL y lo guarda contra el usuario.
+     *
+     * Fase 3: el código se enviará por WhatsApp vía n8n. Por ahora se loguea
+     * a nivel INFO para poder probar el flujo end-to-end sin el canal de WhatsApp.
+     */
+    public void requestPhoneVerification(UUID userId, String phone) {
+        log.debug("Solicitando verificación de teléfono para usuario: {}", userId);
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con ID: " + userId));
+
+        // Si otro usuario ya verificó este número, no se puede reclamar.
+        userRepository.findByPhone(phone).ifPresent(existing -> {
+            if (!existing.getId().equals(userId) && Boolean.TRUE.equals(existing.getPhoneVerified())) {
+                throw new IllegalArgumentException("Ese teléfono ya está vinculado a otra cuenta");
+            }
+        });
+
+        String code = String.format("%06d", RANDOM.nextInt(1_000_000));
+        user.setPhone(phone);
+        user.setPhoneVerified(false);
+        user.setPhoneVerificationCode(code);
+        user.setPhoneVerificationExpiresAt(LocalDateTime.now().plus(PHONE_CODE_TTL));
+        userRepository.save(user);
+
+        // TODO Fase 3: enviar `code` por WhatsApp al número `phone`.
+        log.info("📱 Código de verificación para usuario {} (teléfono {}): {} — válido {} min",
+                userId, phone, code, PHONE_CODE_TTL.toMinutes());
+    }
+
+    /**
+     * 📱 Confirma la verificación del teléfono con el código recibido.
+     */
+    public UserProfileResponseDTO confirmPhoneVerification(UUID userId, String code) {
+        log.debug("Confirmando verificación de teléfono para usuario: {}", userId);
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con ID: " + userId));
+
+        if (user.getPhoneVerificationCode() == null || user.getPhoneVerificationExpiresAt() == null) {
+            throw new IllegalArgumentException("No hay ninguna verificación de teléfono pendiente");
+        }
+        if (LocalDateTime.now().isAfter(user.getPhoneVerificationExpiresAt())) {
+            throw new IllegalArgumentException("El código expiró. Solicitá uno nuevo");
+        }
+        if (!user.getPhoneVerificationCode().equals(code.trim())) {
+            throw new IllegalArgumentException("Código incorrecto");
+        }
+
+        user.setPhoneVerified(true);
+        user.setPhoneVerificationCode(null);
+        user.setPhoneVerificationExpiresAt(null);
+        userRepository.save(user);
+
+        log.info("📱 Teléfono verificado para usuario {}: {}", userId, user.getPhone());
+        UserSettings settings = userSettingsRepository.findByUserId(userId).orElse(null);
+        return toResponseDTO(user, settings);
+    }
+
+    /**
+     * 🔎 Resuelve un teléfono verificado a su userId.
+     * Endpoint interno consumido por el intake-service (no pasa por el gateway).
+     */
+    @Transactional(readOnly = true)
+    public PhoneLookupResponseDTO findUserIdByPhone(String phone) {
+        User user = userRepository.findByPhoneAndPhoneVerifiedTrue(phone)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "No hay ningún usuario con el teléfono verificado: " + phone));
+        return PhoneLookupResponseDTO.builder()
+                .userId(user.getId())
+                .phone(user.getPhone())
+                .build();
+    }
+
+    /**
      * ❌ Eliminar usuario
      */
     public void deleteUser(UUID userId) {
@@ -330,6 +411,8 @@ public class UserService {
                 .firstName(user.getFirstName())
                 .lastName(user.getLastName())
                 .enabled(user.getEnabled())
+                .phone(user.getPhone())
+                .phoneVerified(user.getPhoneVerified())
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt());
 
