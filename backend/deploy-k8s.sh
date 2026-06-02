@@ -118,15 +118,18 @@ wait_for_pod "config-server" 120
 
 # 4. Servicios de negocio (en paralelo, luego esperamos)
 log_step "4/6 Desplegando servicios de negocio..."
+apply_and_log "$K8S_DIR/intake-secrets.yaml"
 apply_and_log "$K8S_DIR/user-service.yaml"
 apply_and_log "$K8S_DIR/account-service.yaml"
 apply_and_log "$K8S_DIR/investment-service.yaml"
 apply_and_log "$K8S_DIR/goals-service.yaml"
+apply_and_log "$K8S_DIR/intake-service.yaml"
 
 wait_for_pod "user-service"       150
 wait_for_pod "account-service"    150
 wait_for_pod "investment-service" 150
 wait_for_pod "goals-service"      150
+wait_for_pod "intake-service"     150
 
 # 5. Gateway
 log_step "5/6 Desplegando Gateway..."

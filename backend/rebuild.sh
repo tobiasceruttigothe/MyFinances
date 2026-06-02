@@ -15,6 +15,7 @@ SERVICES=(
   investment-service
   user-service
   goals-service
+  intake-service
 )
 
 # Colores
