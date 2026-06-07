@@ -1,0 +1,182 @@
+{
+  "name": "WhatsApp Inbound → intake-service",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "whatsapp",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "11111111-1111-1111-1111-111111111111",
+      "name": "Webhook Verify (GET)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-600, 0],
+      "webhookId": "wa-verify-get"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.query['hub.challenge'] }}",
+        "options": {}
+      },
+      "id": "22222222-2222-2222-2222-222222222222",
+      "name": "Respond Challenge",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [-380, 0]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "whatsapp",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "33333333-3333-3333-3333-333333333333",
+      "name": "Webhook Incoming (POST)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-600, 240],
+      "webhookId": "wa-incoming-post"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body || {};\nconst value = body.entry?.[0]?.changes?.[0]?.value;\nconst msg = value?.messages?.[0];\n// Ignore delivery/status callbacks and unsupported message types.\nif (!msg) return [];\nconst type = msg.type;\nif (type !== 'text' && type !== 'audio') return [];\n// Argentina WhatsApp quirk: inbound wa_id carries the '9' (549XXXXXXXXXX),\n// but the Cloud API only accepts SENDING to the number WITHOUT the 9 (54XXXXXXXXXX).\n// Normalize to the no-9 form so the same value works for identity lookup and replies.\nlet from = msg.from;\nif (/^549\\d{10}$/.test(from)) from = '54' + from.slice(3);\nreturn [{ json: {\n  from,\n  phone: '+' + from,\n  type,\n  text: type === 'text' ? msg.text.body : null,\n  audioId: type === 'audio' ? msg.audio.id : null,\n} }];"
+      },
+      "id": "44444444-4444-4444-4444-444444444444",
+      "name": "Extract",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-380, 240]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "typeValidation": "strict", "version": 2 },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "cond-audio",
+              "leftValue": "={{ $json.type }}",
+              "rightValue": "audio",
+              "operator": { "type": "string", "operation": "equals" }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "55555555-5555-5555-5555-555555555555",
+      "name": "Is Audio?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [-160, 240]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://graph.facebook.com/v21.0/{{ $json.audioId }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "id": "66666666-6666-6666-6666-666666666666",
+      "name": "Get Media URL",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [80, 120],
+      "credentials": {
+        "httpHeaderAuth": { "id": "jSefOGAvbhfHfVQg", "name": "Meta WhatsApp Token" }
+      }
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json.url }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": { "response": { "response": { "responseFormat": "file", "outputPropertyName": "data" } } }
+      },
+      "id": "77777777-7777-7777-7777-777777777777",
+      "name": "Download Media",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [300, 120],
+      "credentials": {
+        "httpHeaderAuth": { "id": "jSefOGAvbhfHfVQg", "name": "Meta WhatsApp Token" }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://intake-service:8086/api/v1/intake/audio",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            { "parameterType": "formData", "name": "phone", "value": "={{ $('Extract').item.json.phone }}" },
+            { "parameterType": "formBinaryData", "name": "file", "inputDataFieldName": "data" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "88888888-8888-8888-8888-888888888888",
+      "name": "Intake Audio",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [520, 120]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://intake-service:8086/api/v1/intake/text",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { phone: $json.phone, text: $json.text } }}",
+        "options": {}
+      },
+      "id": "99999999-9999-9999-9999-999999999999",
+      "name": "Intake Text",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [300, 360]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v21.0/1092667377270926/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { messaging_product: 'whatsapp', to: $('Extract').item.json.from, type: 'text', text: { body: $json.reply } } }}",
+        "options": {}
+      },
+      "id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+      "name": "Meta Send Reply",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [760, 240],
+      "credentials": {
+        "httpHeaderAuth": { "id": "jSefOGAvbhfHfVQg", "name": "Meta WhatsApp Token" }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook Verify (GET)": { "main": [[{ "node": "Respond Challenge", "type": "main", "index": 0 }]] },
+    "Webhook Incoming (POST)": { "main": [[{ "node": "Extract", "type": "main", "index": 0 }]] },
+    "Extract": { "main": [[{ "node": "Is Audio?", "type": "main", "index": 0 }]] },
+    "Is Audio?": {
+      "main": [
+        [{ "node": "Get Media URL", "type": "main", "index": 0 }],
+        [{ "node": "Intake Text", "type": "main", "index": 0 }]
+      ]
+    },
+    "Get Media URL": { "main": [[{ "node": "Download Media", "type": "main", "index": 0 }]] },
+    "Download Media": { "main": [[{ "node": "Intake Audio", "type": "main", "index": 0 }]] },
+    "Intake Audio": { "main": [[{ "node": "Meta Send Reply", "type": "main", "index": 0 }]] },
+    "Intake Text": { "main": [[{ "node": "Meta Send Reply", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" }
+}

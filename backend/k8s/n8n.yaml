@@ -1,0 +1,83 @@
+# n8n — adaptador de WhatsApp para el intake-service (Fase 3).
+# Corre los workflows que (A) reciben mensajes de Meta y los mandan al intake-service,
+# y (B) mandan el código de verificación por WhatsApp.
+#
+# Persistencia: PVC con SQLite (suficiente para dev/Minikube). En AWS se cambia el
+# storageClassName por uno de EBS, o se migra a Postgres (DB_TYPE=postgresdb).
+# Los workflows se versionan como JSON en backend/n8n/workflows/ y se importan por API.
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: n8n-data
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: n8n
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: n8n
+  template:
+    metadata:
+      labels:
+        app: n8n
+    spec:
+      # n8n corre como uid/gid 1000 (usuario "node"); fsGroup hace el PVC escribible.
+      securityContext:
+        fsGroup: 1000
+      containers:
+        - name: n8n
+          image: n8nio/n8n:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5678
+          env:
+            # Clave con la que n8n cifra las credenciales guardadas (Secret).
+            - name: N8N_ENCRYPTION_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: n8n-secrets
+                  key: encryption-key
+            - name: N8N_PORT
+              value: "5678"
+            - name: N8N_PROTOCOL
+              value: "http"
+            # URL pública (el túnel de cloudflared). Se setea cuando el túnel está arriba
+            # y se reinicia el pod. Meta usa esta URL para entregar los webhooks.
+            - name: WEBHOOK_URL
+              value: "http://localhost:5678/"
+            # Permitir login por http (acceso vía port-forward en dev). En AWS con https: true.
+            - name: N8N_SECURE_COOKIE
+              value: "false"
+            - name: GENERIC_TIMEZONE
+              value: "America/Argentina/Cordoba"
+            - name: N8N_DIAGNOSTICS_ENABLED
+              value: "false"
+          volumeMounts:
+            - name: data
+              mountPath: /home/node/.n8n
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: n8n-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: n8n
+spec:
+  selector:
+    app: n8n
+  ports:
+    - protocol: TCP
+      port: 5678
+      targetPort: 5678

@@ -1,0 +1,30 @@
+# cloudflared — túnel público (Quick Tunnel) hacia n8n, SOLO para dev/Minikube.
+# Da una URL https://<random>.trycloudflare.com que Meta usa como Callback URL del webhook.
+# No requiere cuenta de Cloudflare. La URL cambia cada vez que el pod reinicia.
+#
+# En AWS esto se reemplaza por un Ingress + ALB (o un Named Tunnel con token).
+# Para ver la URL asignada: kubectl logs deployment/cloudflared | grep trycloudflare
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cloudflared
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cloudflared
+  template:
+    metadata:
+      labels:
+        app: cloudflared
+    spec:
+      containers:
+        - name: cloudflared
+          image: cloudflare/cloudflared:latest
+          imagePullPolicy: IfNotPresent
+          args:
+            - tunnel
+            - --no-autoupdate
+            - --url
+            - http://n8n:5678
