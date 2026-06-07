@@ -75,6 +75,7 @@ All 63 assertions should pass. The only expected failure is Keycloak direct logi
 | account-service | 8081 | Transactions (income/expense), categories, balance, reports |
 | investment-service | 8083 | Investments; can auto-create linked EXPENSE transactions |
 | goals-service | 8085 | Savings goals and progress tracking |
+| intake-service | 8086 | Natural-language transaction intake (WhatsApp + Claude/ElevenLabs); not behind the gateway — fed by n8n. See `backend/intake-service/README-whatsapp-n8n.md` |
 | keycloak | 8082 | Identity provider, JWT issuer |
 | zipkin | 9411 | Distributed tracing |
 
