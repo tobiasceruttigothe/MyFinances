@@ -42,6 +42,7 @@ public class UserService {
     private final KeycloakService keycloakService;
     private final AccountServiceClient accountServiceClient;
     private final ObjectMapper objectMapper;
+    private final WhatsAppNotifier whatsAppNotifier;
 
     public UserProfileResponseDTO register(RegisterRequest request) {
         log.debug("Iniciando registro de usuario: email={}, username={}", request.getEmail(), request.getUsername());
@@ -259,9 +260,13 @@ public class UserService {
         user.setPhoneVerificationExpiresAt(LocalDateTime.now().plus(PHONE_CODE_TTL));
         userRepository.save(user);
 
-        // TODO Fase 3: enviar `code` por WhatsApp al número `phone`.
         log.info("📱 Código de verificación para usuario {} (teléfono {}): {} — válido {} min",
                 userId, phone, code, PHONE_CODE_TTL.toMinutes());
+
+        // Fase 3: enviar el código por WhatsApp vía n8n (no-op si no está configurado).
+        whatsAppNotifier.send(phone, String.format(
+                "Tu código de verificación de MyFinances es: %s (vence en %d minutos).",
+                code, PHONE_CODE_TTL.toMinutes()));
     }
 
     /**
