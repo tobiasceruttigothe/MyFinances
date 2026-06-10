@@ -5,6 +5,9 @@ metadata:
   name: postgres-db
 spec:
   replicas: 1
+  # Recreate: un PVC RWO no puede montarse en dos pods a la vez (rolling update se traba)
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: postgres-db
@@ -27,13 +30,32 @@ spec:
             # Las otras las creamos con un initdb script
             - name: POSTGRES_DB
               value: "account_db"
+            # Subdirectorio para que initdb no choque con lost+found del volumen
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "myfinances_user"]
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 512Mi
           volumeMounts:
             - name: init-scripts
               mountPath: /docker-entrypoint-initdb.d
+            - name: data
+              mountPath: /var/lib/postgresql/data
       volumes:
         - name: init-scripts
           configMap:
             name: postgres-init-scripts
+        - name: data
+          persistentVolumeClaim:
+            claimName: postgres-data
 ---
 apiVersion: v1
 kind: Service
@@ -63,3 +85,14 @@ data:
     
     SELECT 'CREATE DATABASE goals_db'
     WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'goals_db')\gexec
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-data
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
