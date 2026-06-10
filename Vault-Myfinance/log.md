@@ -897,12 +897,12 @@ Workflow A endurecido en `n8n/workflows/whatsapp-inbound.json` (13 nodos, era 10
   en `k8s/n8n.yaml`. `WEBHOOK_URL` actualizado a `https://wa.myfinances.qzz.io/`.
 
 **Aplicado al cluster**: secret `n8n-meta-secrets` con verify token generado
-`c3554f3260db6376499466bf8c3ffcb0` (App Secret aún vacío → HMAC en fail-open). n8n reiniciado,
+`<META_VERIFY_TOKEN — ver Secret n8n-meta-secrets en el cluster>` (App Secret aún vacío → HMAC en fail-open). n8n reiniciado,
 env verificadas en el pod. **El workflow VIEJO sigue activo** hasta re-importar el JSON nuevo.
 
 Pendiente (requiere a Tobías): (1) App Secret de Meta → completar el secret → HMAC fail-closed;
 (2) re-importar el workflow a n8n (API key de n8n o UI); (3) actualizar el Verify Token en Meta a
-`c3554f3260db6376499466bf8c3ffcb0` y re-verificar; (4) mandar un WhatsApp real para confirmar
+`<META_VERIFY_TOKEN — ver Secret n8n-meta-secrets en el cluster>` y re-verificar; (4) mandar un WhatsApp real para confirmar
 inbound + que el HMAC no rechace mensajes legítimos (el rawBody en n8n es sensible a versión).
 
 ## [2026-06-09] review | Hardening Workflow A COMPLETO y verificado (re-importado por API)
@@ -913,7 +913,7 @@ Cerrado el hardening. Workflow re-importado a n8n por la **API pública** (`PUT 
 
 **Verificado end-to-end vía el túnel** (`wa.myfinances.qzz.io`): verify token correcto→challenge / incorrecto→403; HMAC firma válida→procesa hasta Extract / firma inválida→corte limpio (return [], sin crash). La firma se calculó con `openssl dgst -sha256 -hmac <app_secret>` y coincidió con lo que n8n computa del rawBody → confirma que el manejo de rawBody en esta versión de n8n es correcto (era el riesgo que advertí).
 
-App Secret de Meta cargado en el secret `n8n-meta-secrets` (HMAC fail-closed real). Verify token `c3554f3260db6376499466bf8c3ffcb0`.
+App Secret de Meta cargado en el secret `n8n-meta-secrets` (HMAC fail-closed real). Verify token `<META_VERIFY_TOKEN — ver Secret n8n-meta-secrets en el cluster>`.
 
 **Falta de Tobías para cerrar el ciclo**: (1) poner el verify token `c3554...` en el webhook de Meta y re-verificar (antes había puesto "cualquier cosa"; ahora el workflow VALIDA, así que el viejo daría 403); (2) mandar un WhatsApp real (texto+audio) para confirmar que la firma real de Meta valida y el inbound anda. Credenciales nuevas pegadas en chat (App Secret Meta, API key n8n, token Named Tunnel) → lista de rotación.
 

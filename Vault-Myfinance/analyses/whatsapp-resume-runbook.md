@@ -25,7 +25,7 @@ tras apagar Minikube, y (C) **los 3 pendientes para dejarlo "definitivo", con pa
   `$env.META_VERIFY_TOKEN`) + HMAC `X-Hub-Signature-256` (Code con `$env.META_APP_SECRET`,
   rawBody, fail-closed). Verificado con la firma real de Meta.
 - **Secrets en el cluster** (cargados con `kubectl create secret`, NO en git):
-  - `n8n-meta-secrets`: `META_VERIFY_TOKEN=c3554f3260db6376499466bf8c3ffcb0`, `META_APP_SECRET`.
+  - `n8n-meta-secrets`: `META_VERIFY_TOKEN=<META_VERIFY_TOKEN — ver Secret n8n-meta-secrets en el cluster>`, `META_APP_SECRET`.
   - `cloudflared-token`: token del Named Tunnel.
   - `intake-secrets`: `anthropic-api-key` (real) + `elevenlabs-api-key` (real, scope STT).
 - **n8n** (`k8s/n8n.yaml`) con env clave: `N8N_BLOCK_ENV_ACCESS_IN_NODE=false`,
@@ -100,7 +100,7 @@ cualquier usuario: Meta → la app → pasar a **Live** (puede requerir **Busine
 documentación de la empresa). Para uso personal/pruebas el tier actual alcanza.
 
 ## D. Credenciales a ROTAR (todas se pegaron en chats — deuda de seguridad)
-Token del Named Tunnel (Cloudflare → Refresh token), App Secret de Meta, API key de n8n,
+Verify token de Meta (quedó en la historia git — generar uno nuevo), Token del Named Tunnel (Cloudflare → Refresh token), App Secret de Meta, API key de n8n,
 access token de Meta, `ANTHROPIC_API_KEY`, `ELEVENLABS_API_KEY`. Rotar y recargar los Secrets
 con `kubectl create secret`.
 
