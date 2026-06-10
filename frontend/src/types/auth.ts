@@ -41,6 +41,9 @@ export interface UserProfile {
   firstName: string
   lastName: string
   enabled: boolean
+  // Vínculo WhatsApp (intake por audio/texto)
+  phone?: string | null
+  phoneVerified?: boolean
   linkInvestmentsToTransactions: boolean
   currency: string
   timezone: string

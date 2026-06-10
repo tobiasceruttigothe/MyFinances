@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -8,6 +9,8 @@ import { useAuthStore } from '@/stores/authStore'
 import { useToast } from '@/components/ui/use-toast'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
+import { FiniSays } from '@/components/shared/Fini'
+import type { UserProfile } from '@/types/auth'
 
 const CURRENCIES = ['USD', 'ARS', 'EUR', 'BRL', 'CLP', 'COP', 'MXN', 'PEN', 'UYU']
 const LANGUAGES: Array<[string, string]> = [
@@ -190,6 +193,140 @@ export default function ProfilePage() {
           )}
         </section>
       </div>
+
+      <WhatsAppSection profile={profile} />
     </div>
+  )
+}
+
+/**
+ * Vínculo del teléfono con WhatsApp — habilita cargar transacciones
+ * mandándole un texto o audio a Fini. Flujo: pedir código → confirmarlo.
+ */
+function WhatsAppSection({ profile }: { profile?: UserProfile }) {
+  const qc = useQueryClient()
+  const toast = useToast()
+  const [phone, setPhone] = useState('')
+  const [code, setCode] = useState('')
+  const [step, setStep] = useState<'idle' | 'code'>('idle')
+  const [changing, setChanging] = useState(false)
+
+  const requestCode = useMutation({
+    mutationFn: () => authApi.requestPhoneVerification(phone.trim()),
+    onSuccess: () => {
+      setStep('code')
+      toast.success('Te mandamos un código por WhatsApp')
+    },
+    onError: () => toast.error('No pudimos enviar el código. Revisá el formato: +5493511234567'),
+  })
+
+  const confirmCode = useMutation({
+    mutationFn: () => authApi.confirmPhoneVerification(code.trim()),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['profile'] })
+      setStep('idle')
+      setChanging(false)
+      setPhone('')
+      setCode('')
+      toast.success('¡Listo! WhatsApp conectado — mandale un audio a Fini cuando quieras')
+    },
+    onError: () => toast.error('Código incorrecto o vencido. Pedí uno nuevo.'),
+  })
+
+  const verified = Boolean(profile?.phoneVerified && profile?.phone) && !changing
+
+  return (
+    <section className="border border-rule rounded-md bg-paper/40 backdrop-blur-[2px] p-[22px]">
+      <div className="flex items-baseline justify-between mb-4">
+        <h2 className="font-serif font-bold text-[19px]">WhatsApp con Fini</h2>
+        {verified && (
+          <span className="inline-flex items-center gap-1.5 text-[12px] font-bold text-sage bg-sage-soft rounded-pill px-3 py-1">
+            ● Conectado
+          </span>
+        )}
+      </div>
+
+      {verified ? (
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <FiniSays mood="party" size={60} animated={false}>
+            Estamos conectados en <strong className="font-mono">{profile?.phone}</strong>.
+            Mandame «gasté 5000 en el súper» o un audio, y yo lo anoto.
+          </FiniSays>
+          <button
+            onClick={() => {
+              setStep('idle')
+              setChanging(true)
+            }}
+            className="text-[12.5px] text-sepia underline underline-offset-[3px] hover:text-ink transition-colors"
+          >
+            Cambiar número
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <FiniSays mood="neutral" size={60} animated={false}>
+            Conectá tu número y cargá gastos sin abrir la app: me escribís o me
+            mandás un audio por WhatsApp y yo me encargo del resto.
+          </FiniSays>
+
+          {step === 'idle' ? (
+            <form
+              className="flex items-end gap-3 max-w-md"
+              onSubmit={(e) => {
+                e.preventDefault()
+                requestCode.mutate()
+              }}
+            >
+              <div className="flex-1">
+                <Input
+                  label="Tu número (formato internacional)"
+                  placeholder="+5493511234567"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={requestCode.isPending || phone.trim().length < 8}
+                className="bg-ink text-paper rounded-pill px-[18px] py-[11px] text-[13px] font-bold leading-none disabled:opacity-50 hover:bg-pig-deep transition-colors"
+              >
+                {requestCode.isPending ? 'Enviando…' : 'Mandame el código'}
+              </button>
+            </form>
+          ) : (
+            <form
+              className="flex items-end gap-3 max-w-md"
+              onSubmit={(e) => {
+                e.preventDefault()
+                confirmCode.mutate()
+              }}
+            >
+              <div className="flex-1">
+                <Input
+                  label="Código que te llegó por WhatsApp"
+                  placeholder="123456"
+                  value={code}
+                  onChange={(e) => setCode(e.target.value)}
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={confirmCode.isPending || code.trim().length < 4}
+                className="bg-ink text-paper rounded-pill px-[18px] py-[11px] text-[13px] font-bold leading-none disabled:opacity-50 hover:bg-pig-deep transition-colors"
+              >
+                {confirmCode.isPending ? 'Verificando…' : 'Confirmar'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setStep('idle')}
+                className="text-[12.5px] text-sepia underline underline-offset-[3px] hover:text-ink transition-colors pb-3"
+              >
+                Cambiar número
+              </button>
+            </form>
+          )}
+        </div>
+      )}
+    </section>
   )
 }

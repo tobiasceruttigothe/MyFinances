@@ -4,7 +4,10 @@ import { transactionsApi } from '@/api/transactions'
 import { reportsApi } from '@/api/reports'
 import { goalsApi } from '@/api/goals'
 import { useAuthStore } from '@/stores/authStore'
+import { authApi } from '@/api/auth'
 import { CardSkeleton, TableRowSkeleton } from '@/components/ui/skeleton'
+import { Fini, FiniSays, type FiniMood } from '@/components/shared/Fini'
+import { CHART_COLORS } from '@/lib/chart-colors'
 import { formatCurrency, currentYearMonth, cn } from '@/lib/utils'
 
 const WEEKDAYS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
@@ -21,9 +24,18 @@ function shortDate(iso: string) {
 
 function greeting() {
   const h = new Date().getHours()
-  if (h < 12) return 'Buenos días'
-  if (h < 18) return 'Buenas tardes'
-  return 'Buenas noches'
+  if (h < 12) return '¡Buen día'
+  if (h < 18) return '¡Buenas tardes'
+  return '¡Buenas noches'
+}
+
+/* Fini reacciona al mes: festeja si ahorraste fuerte, se preocupa si el
+   balance es negativo. */
+function finiState(net: number, savingsRate: number, hasData: boolean): { mood: FiniMood; says: string } {
+  if (!hasData) return { mood: 'sleepy', says: 'Mes nuevo, panza vacía. Contame qué gastaste y arrancamos.' }
+  if (net < 0) return { mood: 'worried', says: 'Ojo: este mes salió más plata de la que entró. Revisemos dónde se fue.' }
+  if (savingsRate >= 20) return { mood: 'party', says: `¡Mes a puro ahorro! Guardaste el ${savingsRate.toFixed(0)} % de lo que entró. 🎉` }
+  return { mood: 'happy', says: 'Vas bien: entra más de lo que sale. Sigamos así.' }
 }
 
 export default function DashboardPage() {
@@ -50,6 +62,11 @@ export default function DashboardPage() {
     queryFn: goalsApi.getAll,
   })
 
+  const { data: profile } = useQuery({
+    queryKey: ['profile'],
+    queryFn: authApi.getProfile,
+  })
+
   const inProgressGoals = goals?.filter((g) => g.status === 'IN_PROGRESS').slice(0, 3) ?? []
   const topCategories = monthly?.expensesByCategory.slice(0, 6) ?? []
   const maxCategory = topCategories[0]?.totalAmount ?? 1
@@ -58,25 +75,46 @@ export default function DashboardPage() {
   const expense = monthly?.totalExpense ?? 0
   const maxBar = Math.max(income, expense, 1)
   const net = monthly?.balance ?? 0
+  const hasMonthData = income > 0 || expense > 0
+  const fini = finiState(net, monthly?.savingsRate ?? 0, hasMonthData)
 
   return (
     <div className="space-y-6">
-      <div className="flex items-baseline justify-between gap-4 flex-wrap">
-        <div>
-          <div className="text-[11px] tracking-[0.2em] uppercase text-sepia font-semibold">
-            {fullDateLabel()}
+      <div className="flex items-end justify-between gap-4 flex-wrap">
+        <div className="flex items-center gap-4">
+          <Fini mood={fini.mood} size={84} animated />
+          <div>
+            <div className="text-[11px] tracking-[0.2em] uppercase text-sepia font-semibold">
+              {fullDateLabel()}
+            </div>
+            <h1 className="font-serif font-bold text-[38px] leading-[1.05] tracking-tight mt-1">
+              {greeting()}, <span className="text-pig-deep">{user?.firstName ?? 'vos'}!</span>
+            </h1>
+            <p className="text-[13.5px] text-sepia font-semibold mt-1">{fini.says}</p>
           </div>
-          <h1 className="font-serif font-normal text-[40px] leading-[1.05] tracking-tight mt-1.5">
-            {greeting()}, <em className="text-sepia not-italic font-medium font-serif italic">{user?.firstName ?? 'allí'}.</em>
-          </h1>
         </div>
         <Link
           to="/transactions"
-          className="inline-flex items-center gap-2 bg-ink text-paper rounded-pill px-[18px] py-[11px] text-[13.5px] font-semibold leading-none"
+          className="inline-flex items-center gap-2 bg-ink text-paper rounded-pill px-[18px] py-[11px] text-[13.5px] font-bold leading-none hover:bg-pig-deep transition-colors"
         >
           <span className="text-base leading-none">+</span> Anotar un gasto
         </Link>
       </div>
+
+      {profile && !profile.phoneVerified && (
+        <div className="border-2 border-dashed border-pig rounded-md bg-pig-soft p-4 flex items-center justify-between gap-4 flex-wrap">
+          <FiniSays mood="neutral" size={56} animated={false}>
+            ¿Sabías que me podés mandar un audio por WhatsApp? «Gasté 8 lucas en la
+            verdulería» y yo lo anoto solo. Conectá tu número y probalo.
+          </FiniSays>
+          <Link
+            to="/profile"
+            className="inline-flex items-center gap-2 bg-pig-deep text-white rounded-pill px-[18px] py-[11px] text-[13.5px] font-bold leading-none hover:bg-ink transition-colors"
+          >
+            Conectar WhatsApp →
+          </Link>
+        </div>
+      )}
 
       {loadingSummary ? (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -133,7 +171,7 @@ export default function DashboardPage() {
 
           {topCategories.length > 0 ? (
             <div className="flex flex-col gap-2">
-              {topCategories.map((c) => {
+              {topCategories.map((c, i) => {
                 const pct = (c.totalAmount / maxCategory) * 100
                 return (
                   <div
@@ -141,8 +179,11 @@ export default function DashboardPage() {
                     className="grid grid-cols-[110px_1fr_86px] gap-3 items-center"
                   >
                     <span className="font-serif text-[13px] truncate">{c.categoryName}</span>
-                    <div className="h-1 bg-sepia-soft rounded-pill overflow-hidden">
-                      <div className="h-full bg-ink" style={{ width: `${pct}%` }} />
+                    <div className="h-2 bg-sepia-soft rounded-pill overflow-hidden">
+                      <div
+                        className="h-full rounded-pill"
+                        style={{ width: `${pct}%`, background: CHART_COLORS[i % CHART_COLORS.length] }}
+                      />
                     </div>
                     <span className="font-mono text-[12.5px] text-right text-ink">
                       {formatCurrency(c.totalAmount, user?.currency)}
@@ -152,9 +193,11 @@ export default function DashboardPage() {
               })}
             </div>
           ) : (
-            <p className="font-serif italic text-sepia text-[15px] py-6">
-              Sin gastos este mes — la página está en blanco.
-            </p>
+            <div className="py-4">
+              <FiniSays mood="sleepy" size={60}>
+                Sin gastos este mes. O sos un genio del ahorro… o te olvidaste de anotar. 😉
+              </FiniSays>
+            </div>
           )}
         </section>
       </div>
@@ -190,9 +233,15 @@ export default function DashboardPage() {
               </div>
             ))
           ) : (
-            <p className="font-serif italic text-sepia text-[15px] px-[22px] py-8">
-              Sin transacciones aún. <Link to="/transactions" className="underline underline-offset-[3px] hover:text-ink">Anotá la primera →</Link>
-            </p>
+            <div className="px-[22px] py-6">
+              <FiniSays mood="neutral" size={60}>
+                Todavía no anotaste nada.{' '}
+                <Link to="/transactions" className="underline underline-offset-[3px] hover:text-ink">
+                  Cargá tu primer movimiento →
+                </Link>{' '}
+                o mandame un audio por WhatsApp.
+              </FiniSays>
+            </div>
           )}
         </div>
       </section>
@@ -231,9 +280,12 @@ export default function DashboardPage() {
             ))}
           </div>
         ) : (
-          <p className="font-serif italic text-sepia text-[15px]">
-            Sin metas activas. <Link to="/goals" className="underline underline-offset-[3px] hover:text-ink">Crear la primera →</Link>
-          </p>
+          <FiniSays mood="happy" size={60}>
+            Sin metas activas. ¿Unas vacaciones? ¿Un monitor nuevo?{' '}
+            <Link to="/goals" className="underline underline-offset-[3px] hover:text-ink">
+              Creá tu primera meta →
+            </Link>
+          </FiniSays>
         )}
       </section>
     </div>

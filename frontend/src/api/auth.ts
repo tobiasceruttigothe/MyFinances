@@ -31,4 +31,15 @@ export const authApi = {
 
   deleteAccount: () =>
     apiClient.delete('/api/v1/users/profile').then((r) => r.data),
+
+  // Vínculo WhatsApp — el backend manda un código al teléfono (E.164)
+  requestPhoneVerification: (phone: string) =>
+    apiClient
+      .post<{ status: string; message: string }>('/api/v1/users/phone/verify', { phone })
+      .then((r) => r.data),
+
+  confirmPhoneVerification: (code: string) =>
+    apiClient
+      .post<UserProfile>('/api/v1/users/phone/confirm', { code })
+      .then((r) => r.data),
 }

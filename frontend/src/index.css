@@ -1,57 +1,70 @@
-/* frontend/src/index.css */
+/* frontend/src/index.css — identidad "Fini" (chanchito alcancía).
+   Mantiene los NOMBRES de tokens del sistema anterior (Cuaderno) para que
+   todos los componentes retiñan solos: paper/ink/rule/sepia/sage/wine/gold
+   siguen siendo los roles semánticos (fondo/texto/borde/acento/positivo/
+   negativo/destacado), solo cambian los valores. */
 @import "tailwindcss";
 
 @theme {
-  /* Cuaderno · paleta papel */
-  --color-paper:      #f4ecdd;
-  --color-paper-2:    #ede2cd;
-  --color-ink:        #1a1612;
-  --color-rule:       #c9bca0;
-  --color-rule-soft:  rgba(201, 188, 160, 0.5);
-  --color-sepia:      #7c5a2a;
-  --color-sepia-soft: rgba(124, 90, 42, 0.12);
-  --color-sage:       #5e7a4f;
-  --color-sage-soft:  rgba(94, 122, 79, 0.15);
-  --color-wine:       #9a3a2e;
-  --color-wine-soft:  rgba(154, 58, 46, 0.12);
-  --color-gold:       #d4a657;
+  /* Fini · paleta crema */
+  --color-paper:      #fff6ea;
+  --color-paper-2:    #ffecd6;
+  --color-ink:        #46323c;
+  --color-rule:       #ecd5b8;
+  --color-rule-soft:  rgba(236, 213, 184, 0.55);
+  --color-sepia:      #a3656f;
+  --color-sepia-soft: rgba(163, 101, 111, 0.12);
+  --color-sage:       #3d9960;
+  --color-sage-soft:  rgba(61, 153, 96, 0.15);
+  --color-wine:       #c94257;
+  --color-wine-soft:  rgba(201, 66, 87, 0.12);
+  --color-gold:       #e89b2d;
 
-  /* Cuaderno · paleta tinta (inversiones) */
-  --color-tinta-bg:    #1f2a38;
-  --color-tinta-bg-2:  #27374a;
-  --color-tinta-rule:  #36465a;
-  --color-tinta-ink:   #ecdfbd;
-  --color-tinta-sepia: #c7a974;
-  --color-tinta-sage:  #9ec79c;
-  --color-tinta-wine:  #d27e7e;
-  --color-tinta-gold:  #d4a85a;
+  /* Fini · rosa chanchito (acento de marca) */
+  --color-pig:        #f59bb8;
+  --color-pig-deep:   #e0739c;
+  --color-pig-soft:   rgba(245, 155, 184, 0.18);
 
-  /* Fuentes */
-  --font-serif: 'Newsreader', Georgia, serif;
-  --font-sans:  'Hanken Grotesk', system-ui, sans-serif;
+  /* Fini · paleta noche (inversiones — scope data-mode="tinta") */
+  --color-tinta-bg:    #322839;
+  --color-tinta-bg-2:  #3d3147;
+  --color-tinta-rule:  #4d3f59;
+  --color-tinta-ink:   #fdeedd;
+  --color-tinta-sepia: #d8a0b4;
+  --color-tinta-sage:  #7fd6a0;
+  --color-tinta-wine:  #ff8e9d;
+  --color-tinta-gold:  #f3b65c;
+
+  /* Fuentes — "serif" pasa a ser la display redondeada para que todos los
+     títulos existentes (font-serif) adopten la voz de Fini sin tocar JSX. */
+  --font-serif: 'Baloo 2', 'Comic Sans MS', cursive;
+  --font-sans:  'Nunito', system-ui, sans-serif;
   --font-mono:  'JetBrains Mono', ui-monospace, monospace;
 
-  /* Radios */
-  --radius-xs:   4px;
-  --radius-sm:   6px;
-  --radius-md:   8px;
-  --radius-lg:   12px;
+  /* Radios — todo más redondo y blandito */
+  --radius-xs:   8px;
+  --radius-sm:   12px;
+  --radius-md:   16px;
+  --radius-lg:   22px;
   --radius-pill: 999px;
 
-  /* Sombras */
-  --shadow-card: 0 8px 16px -10px rgba(26, 22, 18, 0.18);
-  --shadow-pop:  0 18px 30px -16px rgba(26, 22, 18, 0.32);
+  /* Sombras — suaves, sin solemnidad */
+  --shadow-card: 0 6px 16px -8px rgba(70, 50, 60, 0.16);
+  --shadow-pop:  0 16px 32px -14px rgba(70, 50, 60, 0.28);
 
-  /* Animaciones · overlays Cuaderno
-     Tailwind v4 expone cada --animate-* como utility animate-{name}.
-     Las salidas usan `forwards` para que el elemento muestre el frame
-     final mientras Radix lo desmonta (sin parpadeo de snap-back). */
+  /* Animaciones · overlays (nombres legados cuaderno-* para no tocar
+     dialog.tsx / toast.tsx). Las salidas usan `forwards` para que el
+     elemento muestre el frame final mientras Radix lo desmonta. */
   --animate-cuaderno-overlay-in:    cuaderno-overlay-in 150ms ease-out;
   --animate-cuaderno-overlay-out:   cuaderno-overlay-out 100ms ease-out forwards;
-  --animate-cuaderno-content-in:    cuaderno-content-in 200ms cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-cuaderno-content-in:    cuaderno-content-in 220ms cubic-bezier(0.34, 1.56, 0.64, 1);
   --animate-cuaderno-content-out:   cuaderno-content-out 150ms cubic-bezier(0.4, 0, 0.6, 1) forwards;
-  --animate-cuaderno-toast-in:      cuaderno-toast-in 220ms cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-cuaderno-toast-in:      cuaderno-toast-in 260ms cubic-bezier(0.34, 1.56, 0.64, 1);
   --animate-cuaderno-toast-out:     cuaderno-toast-out 150ms ease-in forwards;
+
+  /* Animaciones · Fini */
+  --animate-fini-bounce: fini-bounce 2.4s ease-in-out infinite;
+  --animate-fini-wiggle: fini-wiggle 3.2s ease-in-out infinite;
 }
 
 @layer base {
@@ -60,27 +73,29 @@
     color: var(--color-ink);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
+    /* lunares rosa muy sutiles, como papel de regalo */
     background-image:
-      radial-gradient(circle at 25% 8%, rgba(255,255,255,0.5), transparent 50%),
-      radial-gradient(circle at 90% 100%, rgba(196,170,120,0.16), transparent 50%);
+      radial-gradient(rgba(224, 115, 156, 0.07) 1.5px, transparent 1.6px),
+      radial-gradient(circle at 20% 0%, rgba(255, 255, 255, 0.6), transparent 45%);
+    background-size: 26px 26px, auto;
     background-attachment: fixed;
   }
 
-  /* Tinta scope — Inversiones. Reasigna las variables genéricas a la paleta
-     tinta para que los componentes (Card, Button, Input, etc.) se vean
-     en azul oscuro automáticamente, sin código duplicado. */
+  /* Scope noche — Inversiones. Reasigna las variables genéricas a la paleta
+     noche para que los componentes (Card, Button, Input, etc.) se vean
+     en violeta oscuro automáticamente, sin código duplicado. */
   [data-mode="tinta"] {
     --color-paper:      var(--color-tinta-bg);
     --color-paper-2:    var(--color-tinta-bg-2);
     --color-ink:        var(--color-tinta-ink);
     --color-rule:       var(--color-tinta-rule);
-    --color-rule-soft:  rgba(54, 70, 90, 0.5);
+    --color-rule-soft:  rgba(77, 63, 89, 0.5);
     --color-sepia:      var(--color-tinta-sepia);
-    --color-sepia-soft: rgba(199, 169, 116, 0.12);
+    --color-sepia-soft: rgba(216, 160, 180, 0.12);
     --color-sage:       var(--color-tinta-sage);
-    --color-sage-soft:  rgba(158, 199, 156, 0.15);
+    --color-sage-soft:  rgba(127, 214, 160, 0.15);
     --color-wine:       var(--color-tinta-wine);
-    --color-wine-soft:  rgba(210, 126, 126, 0.12);
+    --color-wine-soft:  rgba(255, 142, 157, 0.12);
     --color-gold:       var(--color-tinta-gold);
   }
 }
@@ -100,7 +115,7 @@
 @keyframes cuaderno-content-in {
   from {
     opacity: 0;
-    transform: translate(-50%, -48%) scale(0.97);
+    transform: translate(-50%, -46%) scale(0.94);
   }
   to {
     opacity: 1;
@@ -114,7 +129,7 @@
   }
   to {
     opacity: 0;
-    transform: translate(-50%, -48%) scale(0.97);
+    transform: translate(-50%, -48%) scale(0.96);
   }
 }
 @keyframes cuaderno-toast-in {
@@ -124,4 +139,15 @@
 @keyframes cuaderno-toast-out {
   from { opacity: 1; transform: translateX(0); }
   to   { opacity: 0; transform: translateX(2rem); }
+}
+
+/* Fini flota despacito (logo, empty states) */
+@keyframes fini-bounce {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-5px); }
+}
+@keyframes fini-wiggle {
+  0%, 100% { transform: rotate(0deg); }
+  25%      { transform: rotate(-2.5deg); }
+  75%      { transform: rotate(2.5deg); }
 }

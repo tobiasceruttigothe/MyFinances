@@ -6,11 +6,13 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function formatCurrency(amount: number, currency = 'USD'): string {
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(amount)
+  // es-AR: $ 1.234,56 (y "US$ " si la moneda es USD) — el formato que espera
+  // un usuario argentino; antes estaba en en-US
+  return new Intl.NumberFormat('es-AR', { style: 'currency', currency }).format(amount)
 }
 
 export function formatDate(dateStr: string): string {
-  return new Intl.DateTimeFormat('en-US', { dateStyle: 'medium' }).format(new Date(dateStr))
+  return new Intl.DateTimeFormat('es-AR', { dateStyle: 'medium' }).format(new Date(dateStr))
 }
 
 export function formatPercent(value: number): string {

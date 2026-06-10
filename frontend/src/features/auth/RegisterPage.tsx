@@ -7,6 +7,7 @@ import { useState } from 'react'
 import { authApi } from '@/api/auth'
 import { useAuthStore } from '@/stores/authStore'
 import { Input } from '@/components/ui/input'
+import { Fini } from '@/components/shared/Fini'
 
 const schema = z.object({
   firstName: z.string().min(1, 'Requerido').max(50),
@@ -45,34 +46,37 @@ export default function RegisterPage() {
   return (
     <div className="min-h-screen flex">
       <section className="hidden lg:flex lg:flex-[0.9] flex-col p-16 border-r border-rule">
-        <div>
-          <div className="font-serif font-medium text-[26px] leading-none tracking-tight">
-            MyFinances<span className="text-wine">.</span>
-          </div>
-          <div className="text-[11px] tracking-[0.2em] uppercase text-sepia mt-1 font-semibold">
-            Cuaderno de cuentas
+        <div className="flex items-center gap-3">
+          <Fini mood="happy" size={48} coin />
+          <div>
+            <div className="font-serif font-bold text-[24px] leading-none tracking-tight">
+              My-Finances
+            </div>
+            <div className="text-[11px] tracking-[0.16em] uppercase text-pig-deep mt-1 font-bold">
+              con Fini
+            </div>
           </div>
         </div>
 
         <div className="mt-auto">
-          <div className="text-[11px] tracking-[0.2em] uppercase text-sepia font-semibold">
-            Hoja en blanco.
-          </div>
-          <h1 className="font-serif font-normal text-[44px] leading-[1.05] tracking-tight mt-2.5 mb-4 max-w-md">
-            Empezá un <em className="text-sepia">cuaderno nuevo.</em>
+          <Fini mood="neutral" size={140} animated />
+          <h1 className="font-serif font-bold text-[44px] leading-[1.08] tracking-tight mt-5 mb-4 max-w-md">
+            Adoptá un <em className="text-pig-deep not-italic">chanchito.</em>
           </h1>
-          <p className="text-[15px] leading-relaxed text-ink/80 max-w-md">
-            Cada peso anotado es una decisión más a tu favor. Creá tu cuenta y
-            seguí tus ingresos, gastos, inversiones y metas desde el mismo lugar.
+          <p className="text-[15px] leading-relaxed text-ink/80 max-w-md font-semibold">
+            Fini guarda lo que ganás, vigila lo que gastás y festeja cuando
+            ahorrás. Ingresos, gastos, metas e inversiones — todo en un lugar,
+            sin planillas ni dolores de cabeza.
           </p>
         </div>
       </section>
 
       <section className="flex-1 lg:flex-[1.1] flex items-center justify-center px-6 py-12 overflow-y-auto">
         <div className="w-full max-w-md">
-          <div className="lg:hidden mb-8">
-            <div className="font-serif font-medium text-[22px] leading-none tracking-tight">
-              MyFinances<span className="text-wine">.</span>
+          <div className="lg:hidden mb-8 flex items-center gap-2.5">
+            <Fini mood="happy" size={40} coin />
+            <div className="font-serif font-bold text-[21px] leading-none tracking-tight">
+              My-Finances
             </div>
           </div>
 
@@ -133,7 +137,7 @@ export default function RegisterPage() {
               disabled={isSubmitting}
               className="w-full inline-flex items-center justify-center gap-2 bg-ink text-paper rounded-pill px-[18px] py-[12px] text-[13.5px] font-semibold leading-none disabled:opacity-50"
             >
-              {isSubmitting ? 'Creando cuenta…' : 'Empezar cuaderno →'}
+              {isSubmitting ? 'Creando cuenta…' : 'Crear mi cuenta →'}
             </button>
           </form>
 

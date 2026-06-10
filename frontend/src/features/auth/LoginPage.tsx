@@ -7,6 +7,7 @@ import { useState } from 'react'
 import { authApi } from '@/api/auth'
 import { useAuthStore } from '@/stores/authStore'
 import { Input } from '@/components/ui/input'
+import { Fini } from '@/components/shared/Fini'
 import { generateCodeVerifier, generateCodeChallenge, generateState, buildKeycloakAuthUrl } from '@/lib/pkce'
 
 const KEYCLOAK_URL = import.meta.env.VITE_KEYCLOAK_URL ?? 'http://localhost:8082'
@@ -64,40 +65,43 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex">
       <section className="hidden lg:flex lg:flex-[1.05] flex-col p-16 border-r border-rule">
-        <div>
-          <div className="font-serif font-medium text-[26px] leading-none tracking-tight">
-            MyFinances<span className="text-wine">.</span>
-          </div>
-          <div className="text-[11px] tracking-[0.2em] uppercase text-sepia mt-1 font-semibold">
-            Cuaderno de cuentas
+        <div className="flex items-center gap-3">
+          <Fini mood="happy" size={48} coin />
+          <div>
+            <div className="font-serif font-bold text-[24px] leading-none tracking-tight">
+              My-Finances
+            </div>
+            <div className="text-[11px] tracking-[0.16em] uppercase text-pig-deep mt-1 font-bold">
+              con Fini
+            </div>
           </div>
         </div>
 
         <div className="mt-auto">
-          <div className="text-[11px] tracking-[0.2em] uppercase text-sepia font-semibold">
-            Bienvenido, otra vez.
-          </div>
-          <h1 className="font-serif font-normal text-[44px] leading-[1.05] tracking-tight mt-2.5 mb-4 max-w-md">
-            «Quien no sabe lo que gasta, <em className="text-sepia">ignora lo que vale.»</em>
+          <Fini mood="party" size={150} animated />
+          <h1 className="font-serif font-bold text-[44px] leading-[1.08] tracking-tight mt-5 mb-4 max-w-md">
+            Tus cuentas, <em className="text-pig-deep not-italic">sin drama.</em>
           </h1>
-          <p className="text-[15px] leading-relaxed text-ink/80 max-w-md">
-            Tu cuaderno está esperándote. Entrá y seguí escribiendo dónde se
-            van tus pesos — y de paso, dónde van a ir.
+          <p className="text-[15px] leading-relaxed text-ink/80 max-w-md font-semibold">
+            Anotá un gasto en dos toques, o directamente mandale un audio a
+            Fini por WhatsApp: «gasté 5 lucas en el súper» — y listo, queda
+            guardado. Llevar las cuentas no tiene por qué ser un trabajo.
           </p>
         </div>
       </section>
 
       <section className="flex-1 lg:flex-[0.95] flex items-center justify-center px-6 py-12">
         <div className="w-full max-w-sm">
-          <div className="lg:hidden mb-8">
-            <div className="font-serif font-medium text-[22px] leading-none tracking-tight">
-              MyFinances<span className="text-wine">.</span>
+          <div className="lg:hidden mb-8 flex items-center gap-2.5">
+            <Fini mood="happy" size={40} coin />
+            <div className="font-serif font-bold text-[21px] leading-none tracking-tight">
+              My-Finances
             </div>
           </div>
 
           <div className="text-[11px] tracking-[0.2em] uppercase text-sepia font-semibold">Acceder</div>
-          <h2 className="font-serif font-normal text-[36px] leading-[1.05] tracking-tight mt-1.5 mb-8">
-            Abrí <em className="text-sepia">tu cuaderno.</em>
+          <h2 className="font-serif font-bold text-[34px] leading-[1.05] tracking-tight mt-1.5 mb-8">
+            ¡Hola de nuevo! <span className="text-pig-deep">Fini te esperaba.</span>
           </h2>
 
           <button
@@ -161,10 +165,10 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <p className="mt-7 text-center font-serif italic text-[14px] text-sepia">
+          <p className="mt-7 text-center text-[14px] text-sepia font-semibold">
             ¿Todavía sin cuenta?{' '}
-            <Link to="/register" className="not-italic underline underline-offset-[3px] hover:text-ink transition-colors">
-              Empezar un cuaderno
+            <Link to="/register" className="underline underline-offset-[3px] hover:text-ink transition-colors">
+              Sumate gratis
             </Link>
           </p>
         </div>

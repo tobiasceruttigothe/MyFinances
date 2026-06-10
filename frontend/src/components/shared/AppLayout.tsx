@@ -1,5 +1,6 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
+import { Fini } from '@/components/shared/Fini'
 import { cn } from '@/lib/utils'
 
 const mainItems = [
@@ -16,11 +17,11 @@ const asideItems = [
 
 function navItemClass(isActive: boolean) {
   return cn(
-    'flex items-center gap-2 px-2.5 py-2 rounded-xs font-serif text-[17px] leading-none tracking-tight',
+    'flex items-center gap-2 px-3.5 py-2 rounded-pill font-serif text-[16px] leading-none tracking-tight font-semibold',
     'transition-colors',
     isActive
-      ? 'bg-ink text-paper italic'
-      : 'text-ink hover:bg-sepia-soft',
+      ? 'bg-ink text-paper'
+      : 'text-ink hover:bg-pig-soft',
   )
 }
 
@@ -36,12 +37,15 @@ export default function AppLayout() {
   return (
     <div className="flex h-screen text-ink">
       <aside className="w-56 flex flex-col px-[22px] py-7 border-r border-rule flex-shrink-0">
-        <div>
-          <div className="font-serif font-medium text-[22px] tracking-tight leading-none">
-            MyFinances<span className="text-wine">.</span>
-          </div>
-          <div className="text-[10.5px] tracking-[0.16em] uppercase text-sepia mt-1 font-semibold">
-            Cuaderno de cuentas
+        <div className="flex items-center gap-2.5">
+          <Fini mood="happy" size={44} animated coin />
+          <div>
+            <div className="font-serif font-bold text-[21px] tracking-tight leading-none">
+              My-Finances
+            </div>
+            <div className="text-[10.5px] tracking-[0.14em] uppercase text-pig-deep mt-1 font-bold">
+              con Fini 🪙
+            </div>
           </div>
         </div>
 
@@ -50,7 +54,7 @@ export default function AppLayout() {
             <NavLink key={to} to={to} className={({ isActive }) => navItemClass(isActive)}>
               {({ isActive }) => (
                 <>
-                  {isActive && <span className="text-[11px]">❧</span>}
+                  {isActive && <span className="w-1.5 h-1.5 rounded-pill bg-pig" />}
                   <span>{label}</span>
                 </>
               )}
@@ -63,7 +67,7 @@ export default function AppLayout() {
             <NavLink key={to} to={to} className={({ isActive }) => navItemClass(isActive)}>
               {({ isActive }) => (
                 <>
-                  {isActive && <span className="text-[11px]">❧</span>}
+                  {isActive && <span className="w-1.5 h-1.5 rounded-pill bg-pig" />}
                   <span>{label}</span>
                 </>
               )}
@@ -75,7 +79,7 @@ export default function AppLayout() {
           <NavLink to="/profile" className={({ isActive }) => navItemClass(isActive)}>
             {({ isActive }) => (
               <>
-                {isActive && <span className="text-[11px]">❧</span>}
+                {isActive && <span className="w-1.5 h-1.5 rounded-pill bg-pig" />}
                 <span>{user ? `${user.firstName} ${user.lastName}` : 'Perfil'}</span>
               </>
             )}
@@ -87,8 +91,8 @@ export default function AppLayout() {
             Cerrar sesión
           </button>
 
-          <p className="mt-6 font-serif italic text-[11.5px] leading-snug text-sepia">
-            «Quien no sabe lo que gasta, ignora lo que vale.»
+          <p className="mt-6 text-[11.5px] leading-snug text-sepia font-semibold">
+            Fini dice: «anotá ese gasto antes de que se escape» 🐷
           </p>
         </div>
       </aside>
