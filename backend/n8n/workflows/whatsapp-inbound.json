@@ -12,8 +12,30 @@
       "name": "Webhook Verify (GET)",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [-600, 0],
+      "position": [-600, -120],
       "webhookId": "wa-verify-get"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "typeValidation": "strict", "version": 2 },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "cond-verify-token",
+              "leftValue": "={{ $json.query['hub.verify_token'] }}",
+              "rightValue": "={{ $env.META_VERIFY_TOKEN }}",
+              "operator": { "type": "string", "operation": "equals" }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+      "name": "Verify Token OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [-400, -120]
     },
     {
       "parameters": {
@@ -25,14 +47,26 @@
       "name": "Respond Challenge",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
-      "position": [-380, 0]
+      "position": [-180, -200]
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "Forbidden",
+        "options": { "responseCode": 403 }
+      },
+      "id": "cccccccc-cccc-cccc-cccc-cccccccccccc",
+      "name": "Respond Forbidden",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [-180, -40]
     },
     {
       "parameters": {
         "httpMethod": "POST",
         "path": "whatsapp",
         "responseMode": "onReceived",
-        "options": {}
+        "options": { "rawBody": true }
       },
       "id": "33333333-3333-3333-3333-333333333333",
       "name": "Webhook Incoming (POST)",
@@ -43,13 +77,23 @@
     },
     {
       "parameters": {
+        "jsCode": "// Valida la firma HMAC-SHA256 del webhook de Meta (X-Hub-Signature-256).\n// Meta firma el cuerpo CRUDO con el App Secret; por eso el webhook tiene\n// rawBody activado. Si la firma no coincide → se descarta sin procesar\n// (fail-closed). Mientras META_APP_SECRET no esté seteado, deja pasar para\n// no romper el inbound, pero loguea un warning.\nconst crypto = require('crypto');\nconst item = $input.first();\nconst appSecret = $env.META_APP_SECRET;\n\nif (!appSecret) {\n  console.warn('META_APP_SECRET no configurado: HMAC NO validado (webhook abierto).');\n  return [{ json: item.json }];\n}\n\nconst headers = item.json.headers || {};\nconst sigHeader = headers['x-hub-signature-256'] || '';\n\n// Obtener el cuerpo crudo tal como llegó (con rawBody, n8n lo expone como\n// binario 'data' en base64). Fallback a re-serializar el JSON.\nlet raw;\nif (item.binary && item.binary.data && item.binary.data.data) {\n  raw = Buffer.from(item.binary.data.data, 'base64');\n} else if (typeof item.json.body === 'string') {\n  raw = Buffer.from(item.json.body, 'utf8');\n} else {\n  raw = Buffer.from(JSON.stringify(item.json.body || {}), 'utf8');\n}\n\nconst expected = 'sha256=' + crypto.createHmac('sha256', appSecret).update(raw).digest('hex');\nconst a = Buffer.from(sigHeader);\nconst b = Buffer.from(expected);\nif (a.length !== b.length || !crypto.timingSafeEqual(a, b)) {\n  console.warn('Firma HMAC inválida: payload descartado.');\n  return [];\n}\nreturn [{ json: item.json }];"
+      },
+      "id": "dddddddd-dddd-dddd-dddd-dddddddddddd",
+      "name": "Verify Signature",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-400, 240]
+    },
+    {
+      "parameters": {
         "jsCode": "const body = $input.first().json.body || {};\nconst value = body.entry?.[0]?.changes?.[0]?.value;\nconst msg = value?.messages?.[0];\n// Ignore delivery/status callbacks and unsupported message types.\nif (!msg) return [];\nconst type = msg.type;\nif (type !== 'text' && type !== 'audio') return [];\n// Argentina WhatsApp quirk: inbound wa_id carries the '9' (549XXXXXXXXXX),\n// but the Cloud API only accepts SENDING to the number WITHOUT the 9 (54XXXXXXXXXX).\n// Normalize to the no-9 form so the same value works for identity lookup and replies.\nlet from = msg.from;\nif (/^549\\d{10}$/.test(from)) from = '54' + from.slice(3);\nreturn [{ json: {\n  from,\n  phone: '+' + from,\n  type,\n  text: type === 'text' ? msg.text.body : null,\n  audioId: type === 'audio' ? msg.audio.id : null,\n} }];"
       },
       "id": "44444444-4444-4444-4444-444444444444",
       "name": "Extract",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [-380, 240]
+      "position": [-180, 240]
     },
     {
       "parameters": {
@@ -71,7 +115,7 @@
       "name": "Is Audio?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
-      "position": [-160, 240]
+      "position": [40, 240]
     },
     {
       "parameters": {
@@ -85,7 +129,7 @@
       "name": "Get Media URL",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [80, 120],
+      "position": [280, 120],
       "credentials": {
         "httpHeaderAuth": { "id": "jSefOGAvbhfHfVQg", "name": "Meta WhatsApp Token" }
       }
@@ -102,7 +146,7 @@
       "name": "Download Media",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [300, 120],
+      "position": [500, 120],
       "credentials": {
         "httpHeaderAuth": { "id": "jSefOGAvbhfHfVQg", "name": "Meta WhatsApp Token" }
       }
@@ -125,7 +169,7 @@
       "name": "Intake Audio",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [520, 120]
+      "position": [720, 120]
     },
     {
       "parameters": {
@@ -140,12 +184,12 @@
       "name": "Intake Text",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [300, 360]
+      "position": [500, 360]
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "https://graph.facebook.com/v21.0/1092667377270926/messages",
+        "url": "https://graph.facebook.com/v21.0/1203470332841891/messages",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
         "sendBody": true,
@@ -157,15 +201,22 @@
       "name": "Meta Send Reply",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [760, 240],
+      "position": [960, 240],
       "credentials": {
         "httpHeaderAuth": { "id": "jSefOGAvbhfHfVQg", "name": "Meta WhatsApp Token" }
       }
     }
   ],
   "connections": {
-    "Webhook Verify (GET)": { "main": [[{ "node": "Respond Challenge", "type": "main", "index": 0 }]] },
-    "Webhook Incoming (POST)": { "main": [[{ "node": "Extract", "type": "main", "index": 0 }]] },
+    "Webhook Verify (GET)": { "main": [[{ "node": "Verify Token OK?", "type": "main", "index": 0 }]] },
+    "Verify Token OK?": {
+      "main": [
+        [{ "node": "Respond Challenge", "type": "main", "index": 0 }],
+        [{ "node": "Respond Forbidden", "type": "main", "index": 0 }]
+      ]
+    },
+    "Webhook Incoming (POST)": { "main": [[{ "node": "Verify Signature", "type": "main", "index": 0 }]] },
+    "Verify Signature": { "main": [[{ "node": "Extract", "type": "main", "index": 0 }]] },
     "Extract": { "main": [[{ "node": "Is Audio?", "type": "main", "index": 0 }]] },
     "Is Audio?": {
       "main": [

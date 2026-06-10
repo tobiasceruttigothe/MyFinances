@@ -51,10 +51,10 @@ spec:
               value: "5678"
             - name: N8N_PROTOCOL
               value: "http"
-            # URL pública (el túnel de cloudflared). Se setea cuando el túnel está arriba
-            # y se reinicia el pod. Meta usa esta URL para entregar los webhooks.
+            # URL pública: el Named Tunnel de cloudflared (URL fija). Meta usa
+            # esta URL para entregar los webhooks.
             - name: WEBHOOK_URL
-              value: "http://localhost:5678/"
+              value: "https://wa.myfinances.qzz.io/"
             # Permitir login por http (acceso vía port-forward en dev). En AWS con https: true.
             - name: N8N_SECURE_COOKIE
               value: "false"
@@ -62,6 +62,35 @@ spec:
               value: "America/Argentina/Cordoba"
             - name: N8N_DIAGNOSTICS_ENABLED
               value: "false"
+            # Forzar IPv4 al resolver hosts externos (graph.facebook.com). Minikube
+            # no tiene ruta IPv6 saliente; sin esto, Node a veces elige una IPv6 y el
+            # "Meta Send Reply" falla con "DNS server returned an error".
+            - name: NODE_OPTIONS
+              value: "--dns-result-order=ipv4first"
+            # Permitir leer $env dentro de nodos (IF del verify token + Code del
+            # HMAC usan $env.META_*). n8n lo bloquea por defecto; acá el único que
+            # edita workflows es el owner, así que es aceptable.
+            - name: N8N_BLOCK_ENV_ACCESS_IN_NODE
+              value: "false"
+            # Permitir require('crypto') en el Code node del HMAC (n8n bloquea
+            # módulos builtin por defecto).
+            - name: NODE_FUNCTION_ALLOW_BUILTIN
+              value: "crypto"
+            # Secretos de Meta para el hardening del Workflow A (verify token + HMAC).
+            # Se aplican fuera de git (ver k8s/n8n-meta-secrets.yaml). optional:true
+            # para que el pod arranque aunque el Secret no exista todavía.
+            - name: META_VERIFY_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: n8n-meta-secrets
+                  key: META_VERIFY_TOKEN
+                  optional: true
+            - name: META_APP_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: n8n-meta-secrets
+                  key: META_APP_SECRET
+                  optional: true
           volumeMounts:
             - name: data
               mountPath: /home/node/.n8n

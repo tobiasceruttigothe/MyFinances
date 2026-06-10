@@ -1,9 +1,15 @@
-# cloudflared — túnel público (Quick Tunnel) hacia n8n, SOLO para dev/Minikube.
-# Da una URL https://<random>.trycloudflare.com que Meta usa como Callback URL del webhook.
-# No requiere cuenta de Cloudflare. La URL cambia cada vez que el pod reinicia.
+# cloudflared — Named Tunnel hacia n8n. URL ESTABLE con dominio propio.
 #
-# En AWS esto se reemplaza por un Ingress + ALB (o un Named Tunnel con token).
-# Para ver la URL asignada: kubectl logs deployment/cloudflared | grep trycloudflare
+# El tunnel se crea/gestiona en Cloudflare Zero Trust (Networks → Tunnels).
+# El "Public Hostname" (p.ej. wa.myfinances.qzz.io → http://n8n:5678) se
+# configura EN EL DASHBOARD de Cloudflare, no acá: el pod solo necesita el
+# token (Secret cloudflared-token) para conectarse y traer esa config remota.
+# Cloudflare crea el registro DNS y el cert HTTPS automáticamente.
+#
+# El Callback de Meta pasa a https://wa.myfinances.qzz.io/webhook/whatsapp y
+# DEJA DE CAMBIAR en cada reinicio (a diferencia del Quick Tunnel anterior).
+#
+# Para volver al Quick Tunnel dev: args [tunnel, --no-autoupdate, --url, http://n8n:5678]
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -26,5 +32,18 @@ spec:
           args:
             - tunnel
             - --no-autoupdate
-            - --url
-            - http://n8n:5678
+            - run
+            - --token
+            - $(TUNNEL_TOKEN)
+          env:
+            - name: TUNNEL_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: cloudflared-token
+                  key: token
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              memory: 128Mi
