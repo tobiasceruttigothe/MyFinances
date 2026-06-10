@@ -27,16 +27,22 @@ public class JwtAuthenticationFilter extends AbstractGatewayFilterFactory<JwtAut
                     // Extraer el 'sub' (subject) del JWT que contiene el UUID del usuario
                     String userId = jwt.getSubject();
 
-                    // Crear nueva request con el header X-User-Id
+                    // set() pisa cualquier X-User-Id que venga del cliente; header() lo
+                    // agregaría al final y el cliente podría impersonar a otro usuario
                     ServerHttpRequest modifiedRequest = exchange.getRequest()
                             .mutate()
-                            .header("X-User-Id", userId)
+                            .headers(headers -> headers.set("X-User-Id", userId))
                             .build();
 
                     // Retornar el exchange modificado
                     return exchange.mutate().request(modifiedRequest).build();
                 })
-                .defaultIfEmpty(exchange)
+                // Sin JWT (rutas públicas): descartar igual cualquier X-User-Id entrante
+                .defaultIfEmpty(exchange.mutate()
+                        .request(exchange.getRequest().mutate()
+                                .headers(headers -> headers.remove("X-User-Id"))
+                                .build())
+                        .build())
                 .flatMap(chain::filter);
     }
 

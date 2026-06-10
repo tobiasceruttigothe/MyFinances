@@ -1,5 +1,6 @@
 package com.myfinances.gateway_service.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.cors.CorsConfiguration;
@@ -18,15 +19,18 @@ import java.util.List;
 @Configuration
 public class CorsConfig {
 
+    /**
+     * Comma-separated list of allowed origins. Override per environment via
+     * the CORS_ALLOWED_ORIGINS env var (e.g. https://myfinances.qzz.io).
+     */
+    @Value("${cors.allowed-origins:http://localhost:5173,http://localhost:3000}")
+    private List<String> allowedOrigins;
+
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
 
-        // Allowed origins — add production URL here when deploying to AWS
-        config.setAllowedOrigins(List.of(
-                "http://localhost:5173",
-                "http://localhost:3000"
-        ));
+        config.setAllowedOrigins(allowedOrigins);
 
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
 
