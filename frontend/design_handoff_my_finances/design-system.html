@@ -1,0 +1,1465 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=1280" />
+    <title>My Finances · Sistema de diseño</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,500;0,6..72,600;0,6..72,700;1,6..72,400;1,6..72,500&family=Hanken+Grotesk:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <style>
+      :root {
+        /* ── Cuaderno · paleta papel ────────────────────────── */
+        --paper:      #f4ecdd;
+        --paper-2:    #ede2cd;
+        --ink:        #1a1612;
+        --rule:       #c9bca0;
+        --rule-soft:  rgba(201, 188, 160, 0.5);
+        --sepia:      #7c5a2a;
+        --sepia-soft: rgba(124, 90, 42, 0.12);
+        --sage:       #5e7a4f;
+        --wine:       #9a3a2e;
+        --gold:       #d4a657;
+
+        /* ── Cuaderno · paleta tinta (inversiones) ──────────── */
+        --tinta-bg:    #1f2a38;
+        --tinta-bg-2:  #27374a;
+        --tinta-rule:  #36465a;
+        --tinta-ink:   #ecdfbd;
+        --tinta-sepia: #c7a974;
+        --tinta-sage:  #9ec79c;
+        --tinta-wine:  #d27e7e;
+        --tinta-gold:  #d4a85a;
+
+        /* ── Fuentes ─────────────────────────────────────────── */
+        --font-serif: 'Newsreader', Georgia, serif;
+        --font-sans:  'Hanken Grotesk', system-ui, sans-serif;
+        --font-mono:  'JetBrains Mono', ui-monospace, monospace;
+
+        /* ── Espaciado base · 4px ────────────────────────────── */
+        --space-1:  4px;
+        --space-2:  8px;
+        --space-3:  12px;
+        --space-4:  16px;
+        --space-5:  20px;
+        --space-6:  24px;
+        --space-8:  32px;
+        --space-10: 40px;
+        --space-12: 48px;
+        --space-16: 64px;
+
+        /* ── Radios ──────────────────────────────────────────── */
+        --radius-xs: 4px;
+        --radius-sm: 6px;
+        --radius-md: 8px;
+        --radius-lg: 12px;
+        --radius-pill: 999px;
+
+        /* ── Sombras ─────────────────────────────────────────── */
+        --shadow-card: 0 8px 16px -10px rgba(26, 22, 18, 0.18);
+        --shadow-pop:  0 18px 30px -16px rgba(26, 22, 18, 0.32);
+      }
+
+      html, body {
+        margin: 0; padding: 0;
+        background: var(--paper);
+        color: var(--ink);
+        font-family: var(--font-sans);
+        font-size: 14px;
+        line-height: 1.55;
+        -webkit-font-smoothing: antialiased;
+        background-image:
+          radial-gradient(circle at 25% 8%, rgba(255,255,255,0.5), transparent 50%),
+          radial-gradient(circle at 90% 100%, rgba(196,170,120,0.16), transparent 50%);
+      }
+      * { box-sizing: border-box; }
+
+      .ds-shell {
+        display: grid;
+        grid-template-columns: 240px 1fr;
+        min-height: 100vh;
+      }
+
+      /* ── Sidebar de navegación ─────────────────────────────── */
+      aside.ds-nav {
+        position: sticky; top: 0; align-self: start;
+        height: 100vh; overflow: auto;
+        padding: 36px 22px;
+        border-right: 1px solid var(--rule);
+        background: rgba(255,255,255,0.25);
+      }
+      .ds-nav .brand {
+        font-family: var(--font-serif);
+        font-weight: 500;
+        font-size: 20px;
+        letter-spacing: -0.02em;
+        line-height: 1;
+      }
+      .ds-nav .brand span { color: var(--wine); }
+      .ds-nav .kicker {
+        font-size: 10.5px;
+        color: var(--sepia);
+        margin-top: 4px;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+      }
+      .ds-nav nav {
+        display: flex; flex-direction: column; gap: 1px;
+        margin-top: 32px;
+      }
+      .ds-nav nav a {
+        display: block;
+        padding: 7px 10px;
+        font-family: var(--font-serif);
+        font-size: 16px;
+        letter-spacing: -0.01em;
+        color: var(--ink);
+        text-decoration: none;
+        border-radius: var(--radius-xs);
+      }
+      .ds-nav nav a:hover {
+        background: var(--sepia-soft);
+      }
+      .ds-nav nav .sec {
+        font-size: 10px;
+        color: var(--sepia);
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        margin: 16px 10px 6px;
+        font-family: var(--font-sans);
+        font-weight: 600;
+      }
+      .ds-nav .footer {
+        margin-top: 32px;
+        padding-top: 16px;
+        border-top: 1px solid var(--rule);
+        font-family: var(--font-serif);
+        font-style: italic;
+        font-size: 12px;
+        color: var(--sepia);
+        line-height: 1.55;
+      }
+
+      /* ── Main ──────────────────────────────────────────────── */
+      main { padding: 64px 80px 120px; max-width: 1080px; }
+      main > section { margin-bottom: 96px; }
+      main > section:last-child { margin-bottom: 0; }
+
+      .eyebrow {
+        font-size: 11px;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        color: var(--sepia);
+        font-weight: 600;
+      }
+      .h1 {
+        font-family: var(--font-serif);
+        font-weight: 400;
+        font-size: 52px;
+        letter-spacing: -0.03em;
+        line-height: 1.02;
+        margin: 12px 0 14px;
+      }
+      .h1 em { font-style: italic; color: var(--sepia); }
+      .h2 {
+        font-family: var(--font-serif);
+        font-weight: 400;
+        font-size: 34px;
+        letter-spacing: -0.025em;
+        line-height: 1.1;
+        margin: 0 0 8px;
+      }
+      .h2 em { font-style: italic; color: var(--sepia); }
+      .h3 {
+        font-family: var(--font-serif);
+        font-style: italic;
+        font-weight: 500;
+        font-size: 20px;
+        margin: 0 0 14px;
+      }
+      .lead {
+        font-size: 16px;
+        line-height: 1.55;
+        color: #3a322a;
+        max-width: 640px;
+        margin: 0 0 32px;
+      }
+      .meta-row {
+        display: flex; gap: 28px;
+        font-size: 12.5px;
+        color: var(--sepia);
+        margin-top: 14px;
+        font-family: var(--font-serif);
+        font-style: italic;
+      }
+      .meta-row span b { font-style: normal; font-weight: 600; color: var(--ink); }
+
+      hr.rule {
+        border: none;
+        border-top: 1px solid var(--rule);
+        margin: 28px 0 24px;
+      }
+
+      /* ── Bloques de contenido ─────────────────────────────── */
+      .card {
+        background: rgba(255,255,255,0.4);
+        border: 1px solid var(--rule);
+        border-radius: var(--radius-md);
+        padding: 22px 24px;
+      }
+
+      /* ── Code blocks ──────────────────────────────────────── */
+      pre, code {
+        font-family: var(--font-mono);
+        font-size: 12px;
+        line-height: 1.6;
+      }
+      pre {
+        background: rgba(26,22,18,0.04);
+        border: 1px solid var(--rule);
+        border-radius: var(--radius-sm);
+        padding: 14px 16px;
+        overflow: auto;
+        color: var(--ink);
+        margin: 12px 0;
+      }
+      pre .c { color: var(--sepia); }       /* comments */
+      pre .k { color: var(--wine); }        /* keyword */
+      pre .s { color: var(--sage); }        /* string */
+      pre .v { color: var(--ink); font-weight: 600; }
+      code.inline {
+        background: rgba(26,22,18,0.05);
+        padding: 1px 5px;
+        border-radius: 3px;
+        color: var(--ink);
+      }
+
+      /* ── Swatches grid ────────────────────────────────────── */
+      .swatch-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 14px;
+      }
+      .swatch {
+        border: 1px solid var(--rule);
+        border-radius: var(--radius-md);
+        overflow: hidden;
+        background: rgba(255,255,255,0.4);
+      }
+      .swatch .chip {
+        height: 84px;
+        position: relative;
+        border-bottom: 1px solid var(--rule);
+      }
+      .swatch .chip .name {
+        position: absolute; bottom: 8px; left: 12px;
+        font-family: var(--font-serif);
+        font-style: italic;
+        font-size: 18px;
+        color: rgba(255,255,255,0.92);
+        text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+      }
+      .swatch .meta {
+        padding: 10px 12px;
+        font-size: 11px;
+        color: var(--sepia);
+        line-height: 1.5;
+      }
+      .swatch .meta .hex {
+        font-family: var(--font-mono);
+        color: var(--ink);
+        font-weight: 500;
+        font-size: 11.5px;
+      }
+      .swatch .meta .usage {
+        font-family: var(--font-serif);
+        font-style: italic;
+        color: var(--sepia);
+        margin-top: 2px;
+        font-size: 12px;
+      }
+
+      /* When chip background is light, ink the name */
+      .swatch.light .chip .name {
+        color: var(--ink);
+        text-shadow: none;
+      }
+
+      /* ── Tabla de mapping ─────────────────────────────────── */
+      .map-table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      .map-table th, .map-table td {
+        text-align: left;
+        padding: 12px 14px;
+        border-bottom: 1px solid var(--rule-soft);
+        font-size: 13px;
+        vertical-align: top;
+      }
+      .map-table th {
+        font-size: 10.5px;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: var(--sepia);
+        font-weight: 600;
+        border-bottom: 1px solid var(--rule);
+      }
+      .map-table .file {
+        font-family: var(--font-mono);
+        font-size: 11.5px;
+        color: var(--ink);
+      }
+      .map-table .arrow {
+        font-family: var(--font-serif);
+        font-style: italic;
+        color: var(--sepia);
+        font-size: 16px;
+      }
+      .map-table .note {
+        font-family: var(--font-serif);
+        font-style: italic;
+        font-size: 13px;
+        color: var(--sepia);
+      }
+
+      /* ── Typography sample table ──────────────────────────── */
+      .type-row {
+        display: grid;
+        grid-template-columns: 110px 1fr 220px;
+        gap: 20px;
+        align-items: baseline;
+        padding: 16px 0;
+        border-bottom: 1px solid var(--rule-soft);
+      }
+      .type-row .label {
+        font-size: 10.5px;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: var(--sepia);
+        font-weight: 600;
+      }
+      .type-row .spec {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--sepia);
+        line-height: 1.6;
+      }
+
+      /* ── Component preview ────────────────────────────────── */
+      .preview {
+        background: rgba(255,255,255,0.4);
+        border: 1px solid var(--rule);
+        border-radius: var(--radius-md);
+        padding: 28px 32px;
+        margin: 12px 0;
+      }
+      .preview.wide { padding: 24px; }
+      .preview-row {
+        display: flex; gap: 14px; align-items: center; flex-wrap: wrap;
+      }
+      .preview-grid {
+        display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px;
+      }
+
+      /* ── Components — Button ──────────────────────────────── */
+      .btn {
+        font-family: var(--font-sans);
+        font-size: 13.5px;
+        font-weight: 600;
+        padding: 11px 18px;
+        border-radius: var(--radius-pill);
+        border: none;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        line-height: 1;
+        letter-spacing: 0.01em;
+      }
+      .btn-ink { background: var(--ink); color: var(--paper); }
+      .btn-outline {
+        background: transparent; color: var(--ink);
+        border: 1px solid var(--rule);
+        border-radius: var(--radius-sm);
+      }
+      .btn-ghost {
+        background: transparent; color: var(--sepia);
+        font-family: var(--font-serif);
+        font-style: italic;
+        font-weight: 500;
+      }
+      .btn-danger {
+        background: var(--wine); color: var(--paper);
+      }
+
+      /* ── Components — Input ───────────────────────────────── */
+      .input-wrap { margin-bottom: 12px; }
+      .input-wrap .label {
+        font-size: 10.5px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--sepia);
+        font-weight: 600;
+        margin-bottom: 5px;
+      }
+      .input {
+        font-family: var(--font-serif);
+        font-size: 17px;
+        border: none;
+        background: transparent;
+        outline: none;
+        padding: 4px 0 6px;
+        width: 100%;
+        border-bottom: 1px solid var(--rule);
+        color: var(--ink);
+      }
+      .input:focus { border-bottom-color: var(--ink); }
+      .input.has-value { border-bottom-color: var(--ink); }
+      .input::placeholder {
+        color: var(--sepia);
+        font-style: italic;
+      }
+
+      /* ── Components — Badge ───────────────────────────────── */
+      .badge {
+        display: inline-flex; align-items: center; gap: 4px;
+        padding: 4px 10px;
+        border-radius: var(--radius-pill);
+        font-size: 11px;
+        font-weight: 600;
+        background: var(--sepia-soft);
+        color: var(--sepia);
+      }
+      .badge.sage { background: rgba(94,122,79,0.15); color: var(--sage); }
+      .badge.wine { background: rgba(154,58,46,0.12); color: var(--wine); }
+      .badge.ink  { background: var(--ink); color: var(--paper); }
+
+      /* ── Components — ProgressBar ─────────────────────────── */
+      .progress {
+        height: 6px; background: var(--sepia-soft);
+        border-radius: var(--radius-pill); overflow: hidden;
+      }
+      .progress > div { height: 100%; background: var(--ink); }
+      .progress.sage > div { background: var(--sage); }
+      .progress.tall { height: 10px; }
+
+      /* ── Stat row ─────────────────────────────────────────── */
+      .stat-row {
+        display: grid; grid-template-columns: repeat(3, 1fr); gap: 0;
+        border: 1px solid var(--rule);
+        border-radius: var(--radius-md);
+        background: rgba(255,255,255,0.4);
+      }
+      .stat-row .cell { padding: 18px 22px; }
+      .stat-row .cell + .cell { border-left: 1px solid var(--rule); }
+      .stat-row .cell.primary { background: rgba(26,22,18,0.04); }
+      .stat-row .label {
+        font-size: 11px;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--sepia);
+        font-weight: 600;
+      }
+      .stat-row .value {
+        font-family: var(--font-serif);
+        font-size: 28px;
+        letter-spacing: -0.025em;
+        margin-top: 6px;
+        line-height: 1;
+      }
+      .stat-row .hint {
+        font-size: 11.5px;
+        color: var(--sepia);
+        margin-top: 8px;
+      }
+
+      /* ── Day group ────────────────────────────────────────── */
+      .day-group { margin-bottom: 22px; }
+      .day-head {
+        display: flex; justify-content: space-between;
+        padding: 0 4px 6px;
+        font-size: 10.5px;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--sepia);
+        font-weight: 600;
+        border-bottom: 1px solid var(--rule);
+      }
+      .day-head .net {
+        font-family: var(--font-mono);
+        font-size: 11.5px;
+        text-transform: none;
+        letter-spacing: 0.02em;
+      }
+      .day-tx {
+        display: grid;
+        grid-template-columns: 90px 1fr 150px 130px;
+        gap: 16px;
+        align-items: center;
+        padding: 9px 4px;
+        border-bottom: 1px solid var(--rule-soft);
+      }
+      .day-tx .time { font-family: var(--font-mono); font-size: 11.5px; color: var(--sepia); }
+      .day-tx .desc { font-family: var(--font-serif); font-size: 15px; }
+      .day-tx .cat { font-size: 11.5px; color: var(--sepia); }
+      .day-tx .amt {
+        font-family: var(--font-serif); font-size: 16px;
+        text-align: right;
+      }
+      .day-tx .amt.sage { color: var(--sage); }
+
+      /* ── Hero card ────────────────────────────────────────── */
+      .hero-card {
+        background: rgba(255,255,255,0.4);
+        border: 1px solid var(--rule);
+        border-radius: var(--radius-lg);
+        padding: 20px 22px;
+        max-width: 360px;
+      }
+      .hero-card .num {
+        font-family: var(--font-serif);
+        font-size: 36px;
+        letter-spacing: -0.03em;
+        margin-top: 6px;
+        line-height: 1;
+      }
+      .hero-card .chip-row {
+        display: flex; justify-content: space-between;
+        margin-top: 14px;
+        padding-top: 14px;
+        border-top: 1px dashed var(--rule);
+        font-size: 12.5px;
+      }
+
+      /* ── Sparkline preview ─────────────────────────────────── */
+      .sparkline {
+        display: inline-block;
+      }
+
+      /* Section subtitle */
+      .sub-h3 {
+        font-family: var(--font-serif);
+        font-style: italic;
+        font-size: 17px;
+        font-weight: 500;
+        margin: 18px 0 8px;
+        color: var(--ink);
+      }
+
+      /* Side-by-side: preview + code */
+      .pair {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        align-items: start;
+        margin: 12px 0;
+      }
+      .pair > .preview { margin: 0; }
+      .pair > pre { margin: 0; height: 100%; }
+
+      /* Inline note */
+      .note-row {
+        display: flex; align-items: flex-start; gap: 12px;
+        padding: 14px 16px;
+        background: rgba(255,255,255,0.4);
+        border: 1px solid var(--rule);
+        border-left: 3px solid var(--sepia);
+        border-radius: var(--radius-sm);
+        font-family: var(--font-serif);
+        font-style: italic;
+        font-size: 13.5px;
+        color: var(--sepia);
+        margin: 12px 0;
+      }
+      .note-row b { font-style: normal; font-weight: 600; color: var(--ink); }
+
+      /* Section anchors */
+      :target { scroll-margin-top: 40px; }
+
+      /* Color sample dot */
+      .dot {
+        display: inline-block;
+        width: 12px; height: 12px; border-radius: 999px;
+        vertical-align: middle;
+        border: 1px solid rgba(0,0,0,0.06);
+        margin-right: 6px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="ds-shell">
+      <aside class="ds-nav">
+        <div class="brand">MyFinances<span>.</span></div>
+        <div class="kicker">Sistema · Cuaderno</div>
+
+        <nav>
+          <div class="sec">Fundación</div>
+          <a href="#intro">Introducción</a>
+          <a href="#colors">Colores</a>
+          <a href="#typography">Tipografía</a>
+          <a href="#space">Espaciado &amp; radios</a>
+          <a href="#shadows">Sombras</a>
+
+          <div class="sec">Componentes</div>
+          <a href="#button">Button</a>
+          <a href="#input">Input</a>
+          <a href="#card">Card</a>
+          <a href="#badge">Badge</a>
+          <a href="#progress">Progress</a>
+          <a href="#stat-row">Stat row</a>
+          <a href="#day-group">Day group</a>
+          <a href="#hero-card">Hero card</a>
+          <a href="#sparkline">Sparkline</a>
+
+          <div class="sec">Patrones</div>
+          <a href="#pattern-page-head">Encabezado de página</a>
+          <a href="#pattern-section">Sección titulada</a>
+          <a href="#pattern-empty">Estado vacío</a>
+
+          <div class="sec">Implementación</div>
+          <a href="#tokens-css">Tokens CSS</a>
+          <a href="#migration">Migración del repo</a>
+        </nav>
+
+        <div class="footer">
+          «Quien no sabe lo que gasta,<br />ignora lo que vale.»
+        </div>
+      </aside>
+
+      <main>
+        <!-- ───────────────────── INTRO ───────────────────── -->
+        <section id="intro">
+          <div class="eyebrow">Sistema de diseño · v1</div>
+          <h1 class="h1">El cuaderno, <em>traducido a código.</em></h1>
+          <p class="lead">
+            Este documento es el manual del sistema visual de MyFinances. Tokens, tipografía,
+            componentes con código TypeScript copiable, patrones recurrentes y un mapa para
+            migrar lo que ya existe en <code class="inline">frontend/src/</code>. Todo lo que
+            ves abajo está construido con los mismos tokens que tendrías que copiar en
+            <code class="inline">frontend/src/index.css</code>.
+          </p>
+
+          <div class="meta-row">
+            <span><b>Tipo de producto</b> &middot; finanzas personales</span>
+            <span><b>Audiencia</b> &middot; uso diario (gastos) + esporádico (inversiones)</span>
+            <span><b>Plataformas</b> &middot; web + mobile responsive</span>
+            <span><b>Stack actual</b> &middot; React 19 + TS + Tailwind v4</span>
+          </div>
+        </section>
+
+        <!-- ───────────────────── COLORS ───────────────────── -->
+        <section id="colors">
+          <div class="eyebrow">Fundación · color</div>
+          <h2 class="h2">Paleta <em>cuaderno.</em></h2>
+          <p class="lead">
+            Una sola identidad cromática: papel cálido con tinta sepia, acentos
+            naturales (sage, wine) y un oro discreto para destacar. Para inversiones
+            el mismo sistema en un fondo de tinta azul profunda.
+          </p>
+
+          <h3 class="sub-h3">Modo papel · uso diario</h3>
+          <div class="swatch-grid">
+            <div class="swatch light"><div class="chip" style="background: #f4ecdd"><span class="name">Papel</span></div>
+              <div class="meta"><div class="hex">#f4ecdd</div><div class="usage">background principal</div></div></div>
+            <div class="swatch light"><div class="chip" style="background: #ede2cd"><span class="name">Papel 2</span></div>
+              <div class="meta"><div class="hex">#ede2cd</div><div class="usage">página subyacente / acentos</div></div></div>
+            <div class="swatch"><div class="chip" style="background: #1a1612"><span class="name">Tinta</span></div>
+              <div class="meta"><div class="hex">#1a1612</div><div class="usage">texto principal · botones primarios</div></div></div>
+            <div class="swatch light"><div class="chip" style="background: #c9bca0"><span class="name">Rule</span></div>
+              <div class="meta"><div class="hex">#c9bca0</div><div class="usage">divisores · bordes</div></div></div>
+            <div class="swatch"><div class="chip" style="background: #7c5a2a"><span class="name">Sepia</span></div>
+              <div class="meta"><div class="hex">#7c5a2a</div><div class="usage">texto secundario · etiquetas</div></div></div>
+            <div class="swatch"><div class="chip" style="background: #5e7a4f"><span class="name">Sage</span></div>
+              <div class="meta"><div class="hex">#5e7a4f</div><div class="usage">éxito · ingresos · ganancia</div></div></div>
+            <div class="swatch"><div class="chip" style="background: #9a3a2e"><span class="name">Wine</span></div>
+              <div class="meta"><div class="hex">#9a3a2e</div><div class="usage">error · pérdida · destructivo</div></div></div>
+            <div class="swatch light"><div class="chip" style="background: #d4a657"><span class="name">Oro</span></div>
+              <div class="meta"><div class="hex">#d4a657</div><div class="usage">destacar (tickers, sellos)</div></div></div>
+          </div>
+
+          <h3 class="sub-h3">Modo tinta · inversiones</h3>
+          <div class="swatch-grid">
+            <div class="swatch"><div class="chip" style="background: #1f2a38"><span class="name">Tinta bg</span></div>
+              <div class="meta"><div class="hex">#1f2a38</div><div class="usage">background de inversiones</div></div></div>
+            <div class="swatch"><div class="chip" style="background: #27374a"><span class="name">Tinta bg 2</span></div>
+              <div class="meta"><div class="hex">#27374a</div><div class="usage">superficies elevadas</div></div></div>
+            <div class="swatch"><div class="chip" style="background: #36465a"><span class="name">Tinta rule</span></div>
+              <div class="meta"><div class="hex">#36465a</div><div class="usage">divisores en oscuro</div></div></div>
+            <div class="swatch light"><div class="chip" style="background: #ecdfbd"><span class="name">Tinta ink</span></div>
+              <div class="meta"><div class="hex">#ecdfbd</div><div class="usage">texto principal sobre tinta</div></div></div>
+          </div>
+
+          <div class="note-row">
+            <span>
+              <b>Regla de oro:</b> nunca introducir colores fuera de esta paleta. Si un
+              gráfico necesita más variedad (ej: alocación de portafolio), mezclar
+              opacidades de los existentes antes que sumar hues nuevos.
+            </span>
+          </div>
+        </section>
+
+        <!-- ───────────────────── TYPOGRAPHY ───────────────────── -->
+        <section id="typography">
+          <div class="eyebrow">Fundación · tipografía</div>
+          <h2 class="h2"><em>Serif</em> + sans + mono.</h2>
+          <p class="lead">
+            Tres familias con roles claros: <strong>Newsreader</strong> (serif editorial)
+            para títulos, números importantes y "voces" del sistema. <strong>Hanken
+            Grotesk</strong> (sans humanista) para UI funcional. <strong>JetBrains
+            Mono</strong> para fechas, montos crudos y tickers.
+          </p>
+
+          <div class="card">
+            <div class="type-row">
+              <div class="label">Display</div>
+              <div style="font-family: var(--font-serif); font-size: 52px; letter-spacing: -0.03em; line-height: 1.02;">El cuaderno.</div>
+              <div class="spec">Newsreader 400<br />52px · -0.03em · 1.02</div>
+            </div>
+            <div class="type-row">
+              <div class="label">H1 / título</div>
+              <div style="font-family: var(--font-serif); font-size: 36px; letter-spacing: -0.025em; line-height: 1.05;">Buenas tardes, Tobías.</div>
+              <div class="spec">Newsreader 400<br />36px · -0.025em · 1.05</div>
+            </div>
+            <div class="type-row">
+              <div class="label">H2 italic</div>
+              <div style="font-family: var(--font-serif); font-style: italic; font-size: 20px; font-weight: 500;">Movimientos recientes</div>
+              <div class="spec">Newsreader italic 500<br />20px · 1.2</div>
+            </div>
+            <div class="type-row">
+              <div class="label">Eyebrow</div>
+              <div style="font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--sepia); font-weight: 600;">Mayo · semana 20</div>
+              <div class="spec">Hanken 600<br />11px · 0.2em · uppercase</div>
+            </div>
+            <div class="type-row">
+              <div class="label">Body</div>
+              <div style="font-size: 14px;">Texto corrido de la interfaz, tooltips, ayuda inline. Optimizado para lectura rápida.</div>
+              <div class="spec">Hanken 400<br />14px · 1.55</div>
+            </div>
+            <div class="type-row">
+              <div class="label">Body fino</div>
+              <div style="font-size: 12.5px; color: var(--sepia);">Texto secundario, metadatos, ayuda</div>
+              <div class="spec">Hanken 400<br />12.5px · sepia</div>
+            </div>
+            <div class="type-row">
+              <div class="label">Mono</div>
+              <div style="font-family: var(--font-mono); font-size: 13px;">14 may · 14:32 &nbsp;&nbsp; − $ 12.840</div>
+              <div class="spec">JetBrains Mono 400<br />11-13px</div>
+            </div>
+            <div class="type-row">
+              <div class="label">Quote italic</div>
+              <div style="font-family: var(--font-serif); font-style: italic; font-size: 16px; color: var(--sepia);">«Quien no sabe lo que gasta…»</div>
+              <div class="spec">Newsreader italic 400<br />en sepia para citas</div>
+            </div>
+          </div>
+
+          <h3 class="sub-h3">Cuándo serif, cuándo sans</h3>
+          <table class="map-table">
+            <thead><tr><th>Usar serif</th><th>Usar sans</th></tr></thead>
+            <tbody>
+              <tr>
+                <td>
+                  • Títulos de página y sección<br />
+                  • Números grandes (balance, monto principal)<br />
+                  • Estados emocionales o editoriales ("Buenas tardes…")<br />
+                  • Citas y "voces" del sistema<br />
+                  • Nombres de transacciones y categorías en listas
+                </td>
+                <td>
+                  • Labels de formulario (uppercase 11px)<br />
+                  • Texto de botones y CTAs<br />
+                  • Body corrido de párrafos largos<br />
+                  • Tooltips y mensajes de validación<br />
+                  • Tabs y navegación secundaria
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+
+        <!-- ───────────────────── SPACING ───────────────────── -->
+        <section id="space">
+          <div class="eyebrow">Fundación · espaciado</div>
+          <h2 class="h2">Escala de <em>4 puntos.</em></h2>
+          <p class="lead">
+            Todos los márgenes, paddings y gaps son múltiplos de 4px. Esto mantiene
+            la grilla rítmica y predecible.
+          </p>
+
+          <div class="card">
+            <div style="display: flex; align-items: flex-end; gap: 18px; padding: 12px 0;">
+              <div style="text-align: center;">
+                <div style="background: var(--ink); width: 4px; height: 4px;"></div>
+                <div class="spec" style="margin-top: 8px;">--space-1<br />4px</div>
+              </div>
+              <div style="text-align: center;">
+                <div style="background: var(--ink); width: 8px; height: 8px;"></div>
+                <div class="spec" style="margin-top: 8px;">--space-2<br />8px</div>
+              </div>
+              <div style="text-align: center;">
+                <div style="background: var(--ink); width: 12px; height: 12px;"></div>
+                <div class="spec" style="margin-top: 8px;">--space-3<br />12px</div>
+              </div>
+              <div style="text-align: center;">
+                <div style="background: var(--ink); width: 16px; height: 16px;"></div>
+                <div class="spec" style="margin-top: 8px;">--space-4<br />16px</div>
+              </div>
+              <div style="text-align: center;">
+                <div style="background: var(--ink); width: 24px; height: 24px;"></div>
+                <div class="spec" style="margin-top: 8px;">--space-6<br />24px</div>
+              </div>
+              <div style="text-align: center;">
+                <div style="background: var(--ink); width: 32px; height: 32px;"></div>
+                <div class="spec" style="margin-top: 8px;">--space-8<br />32px</div>
+              </div>
+              <div style="text-align: center;">
+                <div style="background: var(--ink); width: 48px; height: 48px;"></div>
+                <div class="spec" style="margin-top: 8px;">--space-12<br />48px</div>
+              </div>
+              <div style="text-align: center;">
+                <div style="background: var(--ink); width: 64px; height: 64px;"></div>
+                <div class="spec" style="margin-top: 8px;">--space-16<br />64px</div>
+              </div>
+            </div>
+          </div>
+
+          <h3 class="sub-h3">Radios</h3>
+          <div class="card">
+            <div style="display: flex; gap: 24px; align-items: flex-end;">
+              <div style="text-align: center;">
+                <div style="width: 64px; height: 48px; background: var(--paper-2); border: 1px solid var(--rule); border-radius: 4px;"></div>
+                <div class="spec" style="margin-top: 8px;">xs · 4px<br />inputs · chips</div>
+              </div>
+              <div style="text-align: center;">
+                <div style="width: 64px; height: 48px; background: var(--paper-2); border: 1px solid var(--rule); border-radius: 6px;"></div>
+                <div class="spec" style="margin-top: 8px;">sm · 6px<br />code · pre</div>
+              </div>
+              <div style="text-align: center;">
+                <div style="width: 64px; height: 48px; background: var(--paper-2); border: 1px solid var(--rule); border-radius: 8px;"></div>
+                <div class="spec" style="margin-top: 8px;">md · 8px<br />cards · tables</div>
+              </div>
+              <div style="text-align: center;">
+                <div style="width: 64px; height: 48px; background: var(--paper-2); border: 1px solid var(--rule); border-radius: 12px;"></div>
+                <div class="spec" style="margin-top: 8px;">lg · 12px<br />hero cards · modales</div>
+              </div>
+              <div style="text-align: center;">
+                <div style="width: 96px; height: 36px; background: var(--ink); border-radius: 999px;"></div>
+                <div class="spec" style="margin-top: 8px;">pill · 999px<br />botones · chips · badges</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ───────────────────── SHADOWS ───────────────────── -->
+        <section id="shadows">
+          <div class="eyebrow">Fundación · sombras</div>
+          <h2 class="h2">Dos sombras, <em>nada más.</em></h2>
+          <p class="lead">
+            Usamos sombras con moderación. Una sombra suave para tarjetas elevadas,
+            una más fuerte para overlays y modales. Tono cálido (tinta diluida),
+            nunca gris frío.
+          </p>
+
+          <div class="preview-grid">
+            <div style="background: rgba(255,255,255,0.6); border-radius: 12px; padding: 24px; box-shadow: 0 8px 16px -10px rgba(26,22,18,0.18); border: 1px solid var(--rule);">
+              <div class="eyebrow">--shadow-card</div>
+              <div style="font-family: var(--font-serif); font-size: 18px; margin-top: 6px;">Para cards y elementos elevados sutilmente</div>
+            </div>
+            <div style="background: rgba(255,255,255,0.6); border-radius: 12px; padding: 24px; box-shadow: 0 18px 30px -16px rgba(26,22,18,0.32); border: 1px solid var(--rule);">
+              <div class="eyebrow">--shadow-pop</div>
+              <div style="font-family: var(--font-serif); font-size: 18px; margin-top: 6px;">Para modales, popovers y elementos flotantes</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ───────────────────── BUTTON ───────────────────── -->
+        <section id="button">
+          <div class="eyebrow">Componente</div>
+          <h2 class="h2"><em>Button.</em></h2>
+          <p class="lead">
+            Tres variantes: <code class="inline">ink</code> (primario, sólido, pill),
+            <code class="inline">outline</code> (secundario, borde fino, radio 6px) y
+            <code class="inline">ghost</code> (terciario, serif italic, sin fondo).
+            Reservar <code class="inline">danger</code> para acciones destructivas.
+          </p>
+
+          <div class="preview">
+            <div class="preview-row">
+              <button class="btn btn-ink">+ Nueva transacción</button>
+              <button class="btn btn-ink">Entrar →</button>
+              <button class="btn btn-outline">Cancelar</button>
+              <button class="btn btn-outline">Exportar PDF</button>
+              <button class="btn btn-ghost">← Atrás</button>
+              <button class="btn btn-danger">Eliminar meta</button>
+            </div>
+          </div>
+
+<pre><span class="c">// frontend/src/components/ui/button.tsx</span>
+<span class="k">import</span> <span class="k">type</span> { ButtonHTMLAttributes } <span class="k">from</span> <span class="s">'react'</span>;
+<span class="k">import</span> { cn } <span class="k">from</span> <span class="s">'@/lib/utils'</span>;
+
+<span class="k">type</span> Variant = <span class="s">'ink'</span> | <span class="s">'outline'</span> | <span class="s">'ghost'</span> | <span class="s">'danger'</span>;
+
+<span class="k">interface</span> <span class="v">ButtonProps</span> <span class="k">extends</span> ButtonHTMLAttributes&lt;HTMLButtonElement&gt; {
+  variant?: Variant;
+  icon?: React.ReactNode;
+}
+
+<span class="k">export function</span> <span class="v">Button</span>({ variant = <span class="s">'ink'</span>, icon, children, className, ...rest }: ButtonProps) {
+  <span class="k">return</span> (
+    &lt;button
+      className={cn(
+        <span class="s">'inline-flex items-center gap-2 font-sans font-semibold text-[13.5px] leading-none cursor-pointer'</span>,
+        variant === <span class="s">'ink'</span>     &amp;&amp; <span class="s">'bg-ink text-paper px-[18px] py-[11px] rounded-full'</span>,
+        variant === <span class="s">'outline'</span> &amp;&amp; <span class="s">'border border-rule px-[18px] py-[11px] rounded-md text-ink'</span>,
+        variant === <span class="s">'ghost'</span>   &amp;&amp; <span class="s">'text-sepia font-serif italic px-[18px] py-[11px]'</span>,
+        variant === <span class="s">'danger'</span>  &amp;&amp; <span class="s">'bg-wine text-paper px-[18px] py-[11px] rounded-full'</span>,
+        className,
+      )}
+      {...rest}
+    &gt;
+      {icon}
+      {children}
+    &lt;/button&gt;
+  );
+}</pre>
+        </section>
+
+        <!-- ───────────────────── INPUT ───────────────────── -->
+        <section id="input">
+          <div class="eyebrow">Componente</div>
+          <h2 class="h2"><em>Input.</em></h2>
+          <p class="lead">
+            En vez del input "caja" típico, usamos una <strong>línea inferior</strong> —
+            como una línea de cuaderno. La línea es fina por default y se vuelve
+            tinta sólida cuando el campo está focuseado o lleno.
+          </p>
+
+          <div class="preview" style="max-width: 460px;">
+            <div class="input-wrap">
+              <div class="label">Email</div>
+              <input class="input has-value" value="tobias.cerutti@gmail.com" readonly />
+            </div>
+            <div class="input-wrap">
+              <div class="label">Descripción</div>
+              <input class="input" placeholder="ej. Café y medialunas" />
+            </div>
+            <div class="input-wrap">
+              <div class="label">Importe</div>
+              <input class="input has-value" value="$ 4.200" readonly style="font-size: 22px;" />
+            </div>
+          </div>
+
+<pre><span class="c">// frontend/src/components/ui/input.tsx</span>
+<span class="k">import</span> <span class="k">type</span> { InputHTMLAttributes } <span class="k">from</span> <span class="s">'react'</span>;
+<span class="k">import</span> { cn } <span class="k">from</span> <span class="s">'@/lib/utils'</span>;
+
+<span class="k">interface</span> <span class="v">InputProps</span> <span class="k">extends</span> InputHTMLAttributes&lt;HTMLInputElement&gt; {
+  label?: string;
+}
+
+<span class="k">export function</span> <span class="v">Input</span>({ label, className, ...rest }: InputProps) {
+  <span class="k">return</span> (
+    &lt;div&gt;
+      {label &amp;&amp; (
+        &lt;div className=<span class="s">"text-[10.5px] uppercase tracking-[0.14em] text-sepia font-semibold mb-1.5"</span>&gt;
+          {label}
+        &lt;/div&gt;
+      )}
+      &lt;input
+        className={cn(
+          <span class="s">'w-full font-serif text-[17px] bg-transparent outline-none px-0 py-1.5'</span>,
+          <span class="s">'border-b border-rule focus:border-ink transition-colors'</span>,
+          <span class="s">'placeholder:text-sepia placeholder:italic'</span>,
+          className,
+        )}
+        {...rest}
+      /&gt;
+    &lt;/div&gt;
+  );
+}</pre>
+        </section>
+
+        <!-- ───────────────────── CARD ───────────────────── -->
+        <section id="card">
+          <div class="eyebrow">Componente</div>
+          <h2 class="h2"><em>Card.</em></h2>
+          <p class="lead">
+            La <strong>PaperCard</strong> es el contenedor básico. Fondo blanco
+            semi-transparente (deja ver el papel debajo), borde sepia fino,
+            radio md.
+          </p>
+
+          <div class="preview">
+            <div class="card" style="margin: 0;">
+              <h3 class="h3">Mes en curso</h3>
+              <p style="margin: 0; font-size: 13px;">Una card típica del producto — eyebrow opcional, título italic, contenido.</p>
+            </div>
+          </div>
+
+<pre><span class="c">// frontend/src/components/ui/card.tsx</span>
+<span class="k">export function</span> <span class="v">Card</span>({ children, className }: { children: React.ReactNode; className?: string }) {
+  <span class="k">return</span> (
+    &lt;div className={cn(
+      <span class="s">'border border-rule rounded-md bg-paper/40 backdrop-blur-[2px]'</span>,
+      <span class="s">'p-[22px]'</span>,
+      className,
+    )}&gt;
+      {children}
+    &lt;/div&gt;
+  );
+}</pre>
+        </section>
+
+        <!-- ───────────────────── BADGE ───────────────────── -->
+        <section id="badge">
+          <div class="eyebrow">Componente</div>
+          <h2 class="h2"><em>Badge.</em></h2>
+          <p class="lead">
+            Chips redondas pequeñas para categorías, estados y conteos.
+            <code class="inline">sepia</code> es el default, <code class="inline">sage</code>
+            para éxito/positivo, <code class="inline">wine</code> para error/negativo,
+            <code class="inline">ink</code> para destacar.
+          </p>
+
+          <div class="preview">
+            <div class="preview-row">
+              <span class="badge">Supermercado</span>
+              <span class="badge sage">+ 25,8 %</span>
+              <span class="badge wine">excedido</span>
+              <span class="badge ink">7 activas</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- ───────────────────── PROGRESS ───────────────────── -->
+        <section id="progress">
+          <div class="eyebrow">Componente</div>
+          <h2 class="h2"><em>Progress.</em></h2>
+          <p class="lead">
+            Barra de progreso fina (6px) para presupuestos y metas. La altura sube
+            a 10px en heros de meta. Color por defecto tinta; sage cuando estás cerca
+            o superaste el objetivo; wine si excediste un presupuesto.
+          </p>
+
+          <div class="preview" style="max-width: 460px;">
+            <div style="margin-bottom: 14px;">
+              <div style="display: flex; justify-content: space-between; font-family: var(--font-serif); font-style: italic; font-size: 13px; margin-bottom: 6px;">
+                <span>Vacaciones Bariloche</span>
+                <span style="color: var(--sage);">65 %</span>
+              </div>
+              <div class="progress sage"><div style="width: 65%;"></div></div>
+            </div>
+            <div style="margin-bottom: 14px;">
+              <div style="display: flex; justify-content: space-between; font-family: var(--font-serif); font-style: italic; font-size: 13px; margin-bottom: 6px;">
+                <span>Supermercado · presupuesto</span>
+                <span>89 %</span>
+              </div>
+              <div class="progress"><div style="width: 89%;"></div></div>
+            </div>
+            <div>
+              <div style="display: flex; justify-content: space-between; font-family: var(--font-serif); font-style: italic; font-size: 13px; margin-bottom: 6px;">
+                <span>Restaurantes</span>
+                <span style="color: var(--wine);">112 % · excedido</span>
+              </div>
+              <div class="progress"><div style="width: 100%; background: var(--wine);"></div></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ───────────────────── STAT ROW ───────────────────── -->
+        <section id="stat-row">
+          <div class="eyebrow">Patrón / componente</div>
+          <h2 class="h2"><em>Stat row.</em></h2>
+          <p class="lead">
+            La estructura de KPIs principal — 3 o 4 celdas con divisores verticales,
+            la última destacada cuando hay una jerarquía clara. Aparece en Dashboard,
+            Reportes, Inversiones, Metas, Categorías.
+          </p>
+
+          <div class="preview wide">
+            <div class="stat-row">
+              <div class="cell">
+                <div class="label">En cuenta</div>
+                <div class="value">$ 487.250</div>
+                <div class="hint" style="color: var(--sage);">+ $ 287.820 este mes</div>
+              </div>
+              <div class="cell">
+                <div class="label">Invertido</div>
+                <div class="value">$ 1.245.800</div>
+                <div class="hint">ROI total +25,8 %</div>
+              </div>
+              <div class="cell primary">
+                <div class="label">Patrimonio neto</div>
+                <div class="value">$ 1.733.050</div>
+                <div class="hint">↗ + 18 % vs. enero</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ───────────────────── DAY GROUP ───────────────────── -->
+        <section id="day-group">
+          <div class="eyebrow">Patrón</div>
+          <h2 class="h2"><em>Day group.</em></h2>
+          <p class="lead">
+            Cómo agrupamos transacciones por día. Encabezado en eyebrow con el neto
+            en mono a la derecha; cada transacción en grid 4-col.
+          </p>
+
+          <div class="preview wide">
+            <div class="day-group">
+              <div class="day-head">
+                <span>Hoy</span>
+                <span class="net" style="color: var(--sage);">Neto + $ 503.660</span>
+              </div>
+              <div class="day-tx">
+                <span class="time">14:32</span>
+                <span class="desc">Coto Caballito</span>
+                <span class="cat">Supermercado</span>
+                <span class="amt">− $ 12.840</span>
+              </div>
+              <div class="day-tx">
+                <span class="time">09:00</span>
+                <span class="desc">Sueldo mayo</span>
+                <span class="cat">Salario</span>
+                <span class="amt sage">+ $ 520.000</span>
+              </div>
+            </div>
+            <div class="day-group" style="margin-bottom: 0;">
+              <div class="day-head">
+                <span>Ayer</span>
+                <span class="net">Neto − $ 5.490</span>
+              </div>
+              <div class="day-tx">
+                <span class="time">18:45</span>
+                <span class="desc">SUBE recarga</span>
+                <span class="cat">Transporte</span>
+                <span class="amt">− $ 3.500</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ───────────────────── HERO CARD ───────────────────── -->
+        <section id="hero-card">
+          <div class="eyebrow">Patrón</div>
+          <h2 class="h2"><em>Hero card.</em></h2>
+          <p class="lead">
+            Tarjeta destacada con un número grande arriba y meta abajo. Versión
+            mobile del balance principal, o para cualquier "número que importa".
+          </p>
+
+          <div class="preview">
+            <div class="hero-card">
+              <div class="eyebrow">En tu cuenta</div>
+              <div class="num">$ 487.250</div>
+              <div class="chip-row">
+                <div>
+                  <div style="color: var(--sepia); font-size: 11px;">Ingresos mayo</div>
+                  <div style="font-family: var(--font-serif); font-style: italic; font-size: 16px; color: var(--sage);">+ $ 720.000</div>
+                </div>
+                <div style="text-align: right;">
+                  <div style="color: var(--sepia); font-size: 11px;">Gastos mayo</div>
+                  <div style="font-family: var(--font-serif); font-style: italic; font-size: 16px; color: var(--wine);">− $ 432.180</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ───────────────────── SPARKLINE ───────────────────── -->
+        <section id="sparkline">
+          <div class="eyebrow">Componente</div>
+          <h2 class="h2"><em>Sparkline.</em></h2>
+          <p class="lead">
+            Micro-gráfico de 80×22 para mostrar tendencia de un activo o métrica.
+            Línea fina (1.2-1.4px) en sage o wine según signo, con un punto al final.
+          </p>
+
+          <div class="preview">
+            <div style="display: flex; gap: 32px; align-items: center;">
+              <div>
+                <div class="eyebrow">AAPL</div>
+                <svg width="80" height="22" style="margin-top: 6px;">
+                  <polyline points="0,17 7,15 14,18 21,14 28,11 35,13 42,8 49,5 56,7 63,3 70,0 77,2" fill="none" stroke="#5e7a4f" stroke-width="1.2" />
+                  <circle cx="77" cy="2" r="2" fill="#5e7a4f" />
+                </svg>
+                <div style="font-family: var(--font-serif); font-style: italic; font-size: 14px; color: var(--sage); margin-top: 4px;">+ 19,7 %</div>
+              </div>
+              <div>
+                <div class="eyebrow">TSLA</div>
+                <svg width="80" height="22" style="margin-top: 6px;">
+                  <polyline points="0,3 7,5 14,7 21,9 28,12 35,15 42,16 49,18 56,19 63,21 70,22 77,22" fill="none" stroke="#9a3a2e" stroke-width="1.2" />
+                  <circle cx="77" cy="22" r="2" fill="#9a3a2e" />
+                </svg>
+                <div style="font-family: var(--font-serif); font-style: italic; font-size: 14px; color: var(--wine); margin-top: 4px;">− 15,3 %</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ───────────────────── PATTERNS ───────────────────── -->
+        <section id="pattern-page-head">
+          <div class="eyebrow">Patrón</div>
+          <h2 class="h2">Encabezado de <em>página.</em></h2>
+          <p class="lead">
+            Toda página de la app sigue la misma estructura: eyebrow uppercase con
+            metadata, título grande en serif con énfasis italic, y un slot a la derecha
+            para acciones primarias.
+          </p>
+
+          <div class="preview wide">
+            <div style="display: flex; justify-content: space-between; align-items: baseline;">
+              <div>
+                <div class="eyebrow">Jueves · 14 de mayo, 2026</div>
+                <div style="font-family: var(--font-serif); font-size: 36px; letter-spacing: -0.025em; line-height: 1.05; margin-top: 6px;">
+                  Buenas tardes, <em style="color: var(--sepia);">Tobías.</em>
+                </div>
+              </div>
+              <button class="btn btn-ink">+ Anotar un gasto</button>
+            </div>
+          </div>
+        </section>
+
+        <section id="pattern-section">
+          <div class="eyebrow">Patrón</div>
+          <h2 class="h2">Sección <em>titulada.</em></h2>
+          <p class="lead">
+            Dentro de las cards: título italic a la izquierda, metadata en eyebrow
+            uppercase a la derecha. Sutil pero consistente en toda la app.
+          </p>
+
+          <div class="preview wide">
+            <div class="card" style="margin: 0;">
+              <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 14px;">
+                <div class="h3" style="margin: 0;">Dónde se fue</div>
+                <span class="eyebrow">Top 6</span>
+              </div>
+              <div style="color: var(--sepia); font-family: var(--font-serif); font-style: italic; font-size: 14px;">Contenido de la sección…</div>
+            </div>
+          </div>
+        </section>
+
+        <section id="pattern-empty">
+          <div class="eyebrow">Patrón</div>
+          <h2 class="h2">Estado <em>vacío.</em></h2>
+          <p class="lead">
+            Cuando no hay datos, mostramos una página de cuaderno en blanco — no un
+            ícono triste. Frase corta en serif italic en sepia y un CTA primario
+            que arranca la acción.
+          </p>
+
+          <div class="preview" style="text-align: center; padding: 50px 32px;">
+            <div style="font-size: 36px; color: var(--sepia); opacity: 0.5; margin-bottom: 14px;">❧</div>
+            <div style="font-family: var(--font-serif); font-style: italic; font-size: 20px; color: var(--sepia); margin-bottom: 4px;">
+              La página de hoy está en blanco.
+            </div>
+            <div style="font-size: 13.5px; color: var(--sepia); margin-bottom: 20px;">
+              Anotá tu primer gasto del día.
+            </div>
+            <button class="btn btn-ink">+ Nuevo gasto</button>
+          </div>
+        </section>
+
+        <!-- ───────────────────── TOKENS CSS ───────────────────── -->
+        <section id="tokens-css">
+          <div class="eyebrow">Implementación</div>
+          <h2 class="h2">Tokens en <em>CSS.</em></h2>
+          <p class="lead">
+            Copiá este bloque entero como reemplazo del que está hoy en
+            <code class="inline">frontend/src/index.css</code>. Compatible con
+            Tailwind v4 a través de <code class="inline">@theme</code>.
+          </p>
+
+<pre><span class="c">/* frontend/src/index.css */</span>
+<span class="k">@import</span> <span class="s">"tailwindcss"</span>;
+
+<span class="k">@theme</span> {
+  <span class="c">/* Cuaderno · paleta papel */</span>
+  --color-paper:      <span class="v">#f4ecdd</span>;
+  --color-paper-2:    <span class="v">#ede2cd</span>;
+  --color-ink:        <span class="v">#1a1612</span>;
+  --color-rule:       <span class="v">#c9bca0</span>;
+  --color-sepia:      <span class="v">#7c5a2a</span>;
+  --color-sage:       <span class="v">#5e7a4f</span>;
+  --color-wine:       <span class="v">#9a3a2e</span>;
+  --color-gold:       <span class="v">#d4a657</span>;
+
+  <span class="c">/* Cuaderno · paleta tinta (inversiones) */</span>
+  --color-tinta-bg:    <span class="v">#1f2a38</span>;
+  --color-tinta-bg-2:  <span class="v">#27374a</span>;
+  --color-tinta-rule:  <span class="v">#36465a</span>;
+  --color-tinta-ink:   <span class="v">#ecdfbd</span>;
+  --color-tinta-sepia: <span class="v">#c7a974</span>;
+  --color-tinta-sage:  <span class="v">#9ec79c</span>;
+  --color-tinta-wine:  <span class="v">#d27e7e</span>;
+  --color-tinta-gold:  <span class="v">#d4a85a</span>;
+
+  <span class="c">/* Fuentes */</span>
+  --font-serif: <span class="s">'Newsreader'</span>, Georgia, serif;
+  --font-sans:  <span class="s">'Hanken Grotesk'</span>, system-ui, sans-serif;
+  --font-mono:  <span class="s">'JetBrains Mono'</span>, ui-monospace, monospace;
+
+  <span class="c">/* Radios */</span>
+  --radius-xs: <span class="v">4px</span>;
+  --radius-sm: <span class="v">6px</span>;
+  --radius-md: <span class="v">8px</span>;
+  --radius-lg: <span class="v">12px</span>;
+}
+
+<span class="k">@layer</span> base {
+  body {
+    background: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    background-image:
+      radial-gradient(circle at 25% 8%, rgba(255,255,255,0.5), transparent 50%),
+      radial-gradient(circle at 90% 100%, rgba(196,170,120,0.16), transparent 50%);
+    background-attachment: fixed;
+  }
+}</pre>
+
+          <h3 class="sub-h3">Cargar las fuentes</h3>
+          <p style="font-size: 13.5px; line-height: 1.6; color: #3a322a;">
+            Agregar al <code class="inline">index.html</code>:
+          </p>
+
+<pre><span class="c">&lt;!-- frontend/index.html, dentro del &lt;head&gt; --&gt;</span>
+&lt;<span class="k">link</span> <span class="v">rel</span>=<span class="s">"preconnect"</span> <span class="v">href</span>=<span class="s">"https://fonts.googleapis.com"</span> /&gt;
+&lt;<span class="k">link</span> <span class="v">rel</span>=<span class="s">"preconnect"</span> <span class="v">href</span>=<span class="s">"https://fonts.gstatic.com"</span> crossorigin /&gt;
+&lt;<span class="k">link</span>
+  <span class="v">href</span>=<span class="s">"https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400;1,6..72,500&amp;family=Hanken+Grotesk:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap"</span>
+  <span class="v">rel</span>=<span class="s">"stylesheet"</span>
+/&gt;</pre>
+        </section>
+
+        <!-- ───────────────────── MIGRATION ───────────────────── -->
+        <section id="migration">
+          <div class="eyebrow">Implementación</div>
+          <h2 class="h2">Migración del <em>repo actual.</em></h2>
+          <p class="lead">
+            Lo que ya existe en <code class="inline">frontend/src/</code> y cómo
+            corresponderlo a este sistema. Ordenado por prioridad.
+          </p>
+
+          <table class="map-table">
+            <thead>
+              <tr>
+                <th style="width: 30%;">Archivo actual</th>
+                <th style="width: 8%;"></th>
+                <th style="width: 30%;">Acción</th>
+                <th>Notas</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="file">src/index.css</td>
+                <td class="arrow">→</td>
+                <td class="file">reemplazar completo</td>
+                <td class="note">Borrar los tokens HSL shadcn. Pegar el bloque de <code class="inline">@theme</code> de arriba. Los <code class="inline">.dark</code> selectors no se usan acá (la app es light por default; "tinta" es una sección, no un modo).</td>
+              </tr>
+              <tr>
+                <td class="file">components/ui/button.tsx</td>
+                <td class="arrow">→</td>
+                <td class="file">reescribir con variants</td>
+                <td class="note">Quitar <code class="inline">cva</code> + <code class="inline">class-variance-authority</code> y usar el patrón de arriba. Variantes: <code class="inline">ink · outline · ghost · danger</code>.</td>
+              </tr>
+              <tr>
+                <td class="file">components/ui/card.tsx</td>
+                <td class="arrow">→</td>
+                <td class="file">reescribir como PaperCard</td>
+                <td class="note">Sin <code class="inline">CardHeader/Content/Footer</code> separados; el contenido fluye libre. Solo un wrapper con borde sepia y bg paper/40.</td>
+              </tr>
+              <tr>
+                <td class="file">components/ui/input.tsx</td>
+                <td class="arrow">→</td>
+                <td class="file">reemplazar con línea</td>
+                <td class="note">Sacar el border completo. Usar solo border-bottom, font-serif para el valor, label uppercase encima.</td>
+              </tr>
+              <tr>
+                <td class="file">components/ui/label.tsx</td>
+                <td class="arrow">→</td>
+                <td class="file">embeber en Input</td>
+                <td class="note">El componente Input ya recibe <code class="inline">label?: string</code> y lo renderiza. Eliminar el componente Label suelto.</td>
+              </tr>
+              <tr>
+                <td class="file">components/ui/badge.tsx</td>
+                <td class="arrow">→</td>
+                <td class="file">reescribir</td>
+                <td class="note">Variants: <code class="inline">sepia (default) · sage · wine · ink</code>. Siempre pill, padding 4×10.</td>
+              </tr>
+              <tr>
+                <td class="file">components/ui/toast.tsx</td>
+                <td class="arrow">→</td>
+                <td class="file">rehacer estilo "papel"</td>
+                <td class="note">Aparece como una tira de papel desde abajo a la derecha. Sage para éxito, wine para error. Cita italic en serif.</td>
+              </tr>
+              <tr>
+                <td class="file">components/ui/skeleton.tsx</td>
+                <td class="arrow">→</td>
+                <td class="file">mantener, ajustar color</td>
+                <td class="note">Cambiar el shimmer gris por <code class="inline">var(--sepia-soft)</code>. Misma idea.</td>
+              </tr>
+              <tr>
+                <td class="file">components/shared/AppLayout.tsx</td>
+                <td class="arrow">→</td>
+                <td class="file">rehacer sidebar</td>
+                <td class="note">Quitar el azul. Sidebar de papel con borde sepia derecha, items en serif. Item activo: bg ink, texto paper, italic con ❧.</td>
+              </tr>
+              <tr>
+                <td class="file">features/dashboard/DashboardPage.tsx</td>
+                <td class="arrow">→</td>
+                <td class="file">aplicar layout nuevo</td>
+                <td class="note">Reemplazar los SummaryCards con la stat-row de 3 celdas. Pie chart → barras horizontales por categoría. Cards azules con gradiente → PaperCard simple.</td>
+              </tr>
+              <tr>
+                <td class="file">features/investments/InvestmentsPage.tsx</td>
+                <td class="arrow">→</td>
+                <td class="file">aplicar paleta Tinta</td>
+                <td class="note">Toda esta página corre con los tokens <code class="inline">--color-tinta-*</code>. Wrapper con <code class="inline">data-mode="tinta"</code> para hacer el switch a nivel de página.</td>
+              </tr>
+              <tr>
+                <td class="file">recharts (Pie, Line)</td>
+                <td class="arrow">→</td>
+                <td class="file">simplificar paleta</td>
+                <td class="note">Reemplazar el array <code class="inline">COLORS</code> azul/verde/violeta por: <code class="inline">[sepia, sage, wine, gold, ink60, sepia60]</code>.</td>
+              </tr>
+              <tr>
+                <td class="file">tailwind shadcn defaults</td>
+                <td class="arrow">→</td>
+                <td class="file">remover</td>
+                <td class="note">Las variables <code class="inline">--background --foreground --primary --primary-foreground</code> etc. del bloque <code class="inline">@layer base :root</code> ya no se usan. El sistema arranca de los tokens nuevos.</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <h3 class="sub-h3">Orden sugerido de migración</h3>
+          <ol style="padding-left: 20px; font-size: 14px; line-height: 1.7;">
+            <li>Reemplazar <code class="inline">src/index.css</code> con los tokens nuevos. Cargar las tres fuentes en <code class="inline">index.html</code>.</li>
+            <li>Reescribir <code class="inline">Button</code>, <code class="inline">Input</code>, <code class="inline">Card</code>, <code class="inline">Badge</code>. Como toda la app los usa, una vez listos cambia el look del producto entero sin tocar las páginas.</li>
+            <li>Rehacer <code class="inline">AppLayout</code> (sidebar) — el chrome que envuelve todo.</li>
+            <li>Migrar página por página: Dashboard, Transacciones, Reportes, Metas, Categorías. Cada una toma ~30-60 min siguiendo los patrones documentados acá.</li>
+            <li>Inversiones al final, con el switch a la paleta Tinta. Es la que tiene más diferencias, conviene hacerla con el resto ya estabilizado.</li>
+            <li>Auth (Login/Register) y Profile — pueden ir antes o después, son independientes.</li>
+          </ol>
+
+          <div class="note-row">
+            <span>
+              <b>Una decisión pendiente:</b> hoy <code class="inline">recharts</code> está
+              instalado para el pie + line del dashboard y reports. Es robusto pero
+              "pesado" para los micro-gráficos. Para sparklines (inversiones) recomiendo
+              SVG inline puro — ya lo prototipamos así y queda mejor con menos código.
+              Para el line chart de Reportes seguir con recharts está perfecto.
+            </span>
+          </div>
+        </section>
+      </main>
+    </div>
+  </body>
+</html>

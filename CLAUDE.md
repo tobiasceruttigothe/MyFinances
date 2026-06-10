@@ -155,7 +155,7 @@ npm run build    # tsc -b && vite build
 npm run lint     # eslint .
 ```
 
-A design handoff bundle lives in `frontend/design_handoff_my_finances/` (May 2026) introducing the **"Cuaderno"** visual system — see its `README.md` and `design-system.html` for tokens, components, and a 7-step migration plan. The 7-step migration is **complete** as of 2026-05-17 (commits prefixed `feat(ui)`). The current `@theme` in `src/index.css` defines the Cuaderno (paper) + Tinta (ink, for Inversiones) palettes, fonts, radii, shadows, and the `--animate-cuaderno-*` tokens used by Dialog and Toast overlays. Lint is at **0 errors + 0 warnings**; any new lint issue is a regression. Open items live in `Vault-Myfinance/analyses/next-steps-cuaderno-migration.md` § Próximo (bottom-sheets mobile, sparkline real, visual review).
+**Visual identity: "Fini"** (since 2026-06-09, supersedes Cuaderno — see `Vault-Myfinance/decisions/decision-identidad-fini.md`): a piggy-bank mascot drawn in pure SVG (`src/components/shared/Fini.tsx`, moods `happy/party/worried/sleepy/neutral`, plus the `FiniSays` speech bubble), cream/pink/coral palette, **Baloo 2** (display) + **Nunito** (body) fonts, rounded radii, playful es-AR copy. The retheme kept the Cuaderno **token names** (`paper/ink/rule/sepia/sage/wine/gold`, `data-mode="tinta"` scope for Inversiones, `--animate-cuaderno-*` keyframes used by Dialog/Toast) and only changed values in `src/index.css` `@theme` — when tokens change, manually sync `src/lib/chart-colors.ts` (Recharts needs literal hex). The old Cuaderno handoff in `frontend/design_handoff_my_finances/` is historical reference. Lint is at **0 errors + 0 warnings**; any new lint issue is a regression.
 
 
 
@@ -166,4 +166,4 @@ A design handoff bundle lives in `frontend/design_handoff_my_finances/` (May 202
 
 ## Project Goal
 
-The goal of this project is to design the most complete personal finance system possible and then use it as a test for deployment on AWS.
+The goal of this project is to design the most complete personal finance system possible and deploy it on a **plain VPS running Kubernetes (k3s)**, exposed through Cloudflare (domain `myfinances.qzz.io`). AWS is explicitly **no longer the target** (see `Vault-Myfinance/decisions/decision-vps-en-vez-de-aws.md`).

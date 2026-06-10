@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MyFinances — Exploración de identidad</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,500;0,6..72,600;0,6..72,700;1,6..72,400&family=Hanken+Grotesk:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500;600;700&family=Manrope:wght@300;400;500;600;700;800&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,500&family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600;700;800&family=Geist+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+
+    <style>
+      html, body { margin: 0; padding: 0; background: #ededed; font-family: 'Hanken Grotesk', system-ui, sans-serif; }
+      #root { min-height: 100vh; }
+
+      .intro {
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 56px 32px 32px;
+        color: #1a1a1a;
+      }
+      .intro .eyebrow {
+        font-size: 11px;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: #707070;
+        font-weight: 600;
+      }
+      .intro h1 {
+        font-family: 'Newsreader', serif;
+        font-weight: 400;
+        font-size: 52px;
+        line-height: 1.05;
+        letter-spacing: -0.02em;
+        margin: 12px 0 16px;
+      }
+      .intro h1 em { font-style: italic; color: #5b5b5b; }
+      .intro p.lead {
+        font-size: 17px;
+        line-height: 1.55;
+        color: #404040;
+        max-width: 680px;
+        margin: 0 0 28px;
+      }
+      .intro .grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+        margin-top: 24px;
+      }
+      .intro .grid .item {
+        border: 1px solid #d8d8d8;
+        border-radius: 12px;
+        padding: 18px 18px 20px;
+        background: #fff;
+      }
+      .intro .grid .item .tag {
+        display: inline-block;
+        font-size: 10px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        font-weight: 700;
+        padding: 4px 8px;
+        border-radius: 999px;
+        margin-bottom: 10px;
+      }
+      .intro .grid .item h3 {
+        margin: 0 0 6px;
+        font-size: 17px;
+        font-weight: 700;
+        letter-spacing: -0.01em;
+      }
+      .intro .grid .item p {
+        margin: 0;
+        font-size: 13.5px;
+        line-height: 1.5;
+        color: #555;
+      }
+      .tag-a { background: #f3ede2; color: #6f5a30; }
+      .tag-b { background: #e7f1ec; color: #2d6a4f; }
+      .tag-c { background: #ececff; color: #3b3bb0; }
+
+      .palette-row { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 8px; }
+      .palette-row .swatch {
+        display: flex; align-items: center; gap: 10px;
+        padding: 8px 12px 8px 8px;
+        border: 1px solid #d8d8d8; border-radius: 999px;
+        background: #fff;
+        font-size: 12px;
+      }
+      .palette-row .swatch span {
+        width: 22px; height: 22px; border-radius: 999px;
+        border: 1px solid rgba(0,0,0,0.08); flex-shrink: 0;
+      }
+      .palette-row .swatch b {
+        font-weight: 700; color: #1a1a1a;
+      }
+      .palette-row .swatch i {
+        font-style: normal; color: #707070;
+        font-family: 'JetBrains Mono', monospace; font-size: 10.5px;
+      }
+
+      /* artboard scoped resets — avoid Tailwind */
+      .artboard, .artboard * { box-sizing: border-box; }
+    </style>
+
+    <script
+      src="https://unpkg.com/react@18.3.1/umd/react.development.js"
+      integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L"
+      crossorigin="anonymous"
+    ></script>
+    <script
+      src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js"
+      integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm"
+      crossorigin="anonymous"
+    ></script>
+    <script
+      src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js"
+      integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y"
+      crossorigin="anonymous"
+    ></script>
+  </head>
+  <body>
+    <div id="root">
+      <div class="intro">
+        <div class="eyebrow">My Finances · sistema completo</div>
+        <h1>Cuaderno claro &amp; <em>Tinta profunda.</em></h1>
+        <p class="lead">
+          Las pantallas del producto en su versión actual. <strong>Cuaderno claro</strong> para uso diario,
+          <strong>Tinta profunda</strong> para inversiones — mismo cuaderno encuadernado en azul oscuro.
+          Misma tipografía, mismos acentos (sage para ganancia, wine para pérdida, oro para destacar) en toda la app.
+        </p>
+
+        <p style="font-size: 14px; line-height: 1.55; color: #404040; max-width: 680px; margin: 12px 0 24px;">
+          → <a href="design-system.html" style="color: #1a1a1a; font-weight: 600; text-decoration: underline; text-underline-offset: 3px;">Ver sistema de diseño completo</a>
+          &nbsp;·&nbsp; tokens, tipografía, componentes con código copiable y mapa de migración del repo.
+        </p>
+
+        <div class="palette-row">
+          <div class="swatch"><span style="background:#f4ecdd"></span><b>Papel</b><i>#f4ecdd</i></div>
+          <div class="swatch"><span style="background:#1f2a38"></span><b>Tinta</b><i>#1f2a38</i></div>
+          <div class="swatch"><span style="background:#1a1612"></span><b>Tinta sólida</b><i>#1a1612</i></div>
+          <div class="swatch"><span style="background:#7c5a2a"></span><b>Sepia</b><i>#7c5a2a</i></div>
+          <div class="swatch"><span style="background:#5e7a4f"></span><b>Sage</b><i>#5e7a4f</i></div>
+          <div class="swatch"><span style="background:#9a3a2e"></span><b>Wine</b><i>#9a3a2e</i></div>
+          <div class="swatch"><span style="background:#d4a657"></span><b>Oro</b><i>#d4a657</i></div>
+        </div>
+      </div>
+
+      <design-canvas-root id="canvas-root"></design-canvas-root>
+    </div>
+
+    <script type="text/babel" src="design-canvas.jsx?v=9"></script>
+    <script type="text/babel" src="shared.jsx?v=9"></script>
+    <script type="text/babel" src="cuaderno-system.jsx?v=9"></script>
+    <script type="text/babel" src="direction-a.jsx?v=9"></script>
+    <script type="text/babel" src="screens-reports-goals.jsx?v=9"></script>
+    <script type="text/babel" src="screens-categories-profile.jsx?v=9"></script>
+    <script type="text/babel" src="screens-auth.jsx?v=9"></script>
+    <script type="text/babel" src="ios-frame.jsx?v=9"></script>
+    <script type="text/babel" src="screens-mobile.jsx?v=9"></script>
+    <script type="text/babel" src="screens-onboarding.jsx?v=9"></script>
+    <script type="text/babel" src="screens-overlays.jsx?v=9"></script>
+    <script type="text/babel" src="mount.jsx?v=9"></script>
+  </body>
+</html>
